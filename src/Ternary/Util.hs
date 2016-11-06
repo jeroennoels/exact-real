@@ -3,9 +3,9 @@
 module Ternary.Util where
 
 import Data.Monoid (Sum(Sum), Product(Product))
-
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
+
 
 eq3 :: Eq a => a -> a -> a -> Bool
 eq3 a b c = a == b && b == c
@@ -34,7 +34,6 @@ quickSuite = sequence_ . map quickBatch
 
 test n prop = quickCheckWithResult args prop
   where args = stdArgs { maxSuccess = n, chatty = False}
-
 
 instance EqProp Rational where (=-=) = eq
 

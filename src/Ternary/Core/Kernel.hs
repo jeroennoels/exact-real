@@ -34,9 +34,8 @@ transformFirstTwo f _ a Step0 = (f a, Step1)
 transformFirstTwo _ g a Step1 = (g a, After)
 transformFirstTwo _ _ a After = (a, After)
 
-
 -- With the chain function below, we define sequential composition of
--- a list of kernels, combining states into a list of states. 
+-- a list of kernels, combining states into a list of states.
 
 -- The first argument generates a kernel from a parameter.  So a list
 -- of such parameters implicitly defines the list of kernels to be
@@ -54,12 +53,11 @@ chain gen (p:ps) a (u:us) =
   in (c,v:vs)
 chain _ [] a [] = (a,[])
 
-
 -- For a given state, a lazy kernel may or may not force its input.
 -- If we know that the input is irrelevant, for a certain kernel in a
--- certain state, it makes not much sense to provide an aritrary value
--- for the input.  I provide this function to keep that decision in a
--- single place.
+-- certain state, it makes not much sense to provide an arbitrary
+-- value for the input.  I provide this function to keep that decision
+-- in a single place.
 
 unsafeIgnoreInput :: Kernel a b s -> s -> (b,s)
 unsafeIgnoreInput f s = f ignore s

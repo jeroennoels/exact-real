@@ -3,7 +3,7 @@ module Ternary.Core.Addition (Sa(Sa0), plus) where
 import Ternary.Core.Kernel
 import Ternary.Core.Digit
 
--- The addition kernel needs only three states. 
+-- The addition kernel needs only three states.
 
 data Sa = Sa0 | Sa1 | Sa2 deriving (Show, Eq)
 

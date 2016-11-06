@@ -18,7 +18,6 @@ absDigits x@(P1:_) = x
 absDigits x@(P2:_) = x
 absDigits x = negateDigits x   
 
-
 -- signum is undefined on infinite representations of zero
 
 safeSignum :: FiniteExact -> FiniteExact
@@ -31,7 +30,6 @@ safeSignum x = let (Exact ds _) = unwrapFinite x in sgn ds
         sgn (M2:_) = negate one
         sgn [] = zero          
 
-
 instance Num Exact where
   abs = unsafeApplyToDigits absDigits
   signum = error "Exact.signum is undefined" 
@@ -40,8 +38,7 @@ instance Num Exact where
   (+) = addExact
   (*) = mulExact
 
-
--- Preferrably derive the finite version from the infinite one.
+-- Preferably derive the finite version from the infinite one.
 -- Thus we avoid duplication and maximize test coverage.
 -- In the case of fromInteger, it is more natural the other way around.
 
@@ -53,7 +50,6 @@ instance Num FiniteExact where
   (+) = addFiniteExact
   (*) = mulFiniteExact
 
-
 add :: [T2] -> [T2] -> [T2]
 add x y = recurse plus (zipWith addT2 x y) Sa0
 
@@ -61,7 +57,6 @@ addExact :: Exact -> Exact -> Exact
 addExact (Exact x p) (Exact y q) = Exact z (s+1)
   where s = max p q
         z = add (prepend (s-p) x) (prepend (s-q) y) 
-
 
 -- the difficulty is to cut off the infinite result at a safe length
 addFiniteExact :: FiniteExact -> FiniteExact -> FiniteExact
@@ -78,7 +73,6 @@ zero, one :: FiniteExact
 zero = 0
 one = 1
 
-
 mul :: [T2] -> [T2] -> [T2]
 mul (x:xs) (y:ys) = recurse multKernel (zip xs ys) init
   where init = MulState [TriangleParam x y] [initialTriangleState]
@@ -90,4 +84,3 @@ mulFiniteExact :: FiniteExact -> FiniteExact -> FiniteExact
 mulFiniteExact x y = takeFinite cutoff infinite
    where infinite = infiniteExact x * infiniteExact y
          cutoff = finiteLength x + finiteLength y + 1
-         

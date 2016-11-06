@@ -1,7 +1,6 @@
 The purpose of this project is to study and implement [exact real
-arithmetic](https://wiki.haskell.org/Exact_real_arithmetic).
-
-Exact real arithmetic combines arbitrary precision with [incremental
+arithmetic](https://wiki.haskell.org/Exact_real_arithmetic).  Exact
+real arithmetic combines arbitrary precision with [incremental
 computation](https://en.wikipedia.org/wiki/Incremental_computing).
 
 Project characteristics and goals
@@ -23,14 +22,12 @@ Project characteristics and goals
   the result.  This is motivated by separation of concerns: a
   transition function is independent of the data structures used to
   represent a stream of digits.  The correctness of these state
-  machines is therefore not coupled to the details of how to drive
+  machines is therefor not coupled to the details of how to drive
   forward a computation.
 
-* I believe modern power tools such as Z3 can bring new solutions to
-  these ancient problems.
-
+* I believe modern [power tools](https://github.com/Z3Prover/z3) can
+  bring new solutions to these ancient problems.
+  
 * Efficiency is treated as a separate concern.  State machines
   described at a high level of abstraction can be compiled to an
   adequate low-level computational substrate.
-
-* This is a fun project -- I am trying the Feynman method.

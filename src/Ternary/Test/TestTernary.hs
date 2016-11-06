@@ -12,7 +12,6 @@ import Ternary.Util
 import Ternary.Triad
 import Ternary.Test.Fiddle
 
-
 import Control.Monad (liftM, liftM2)
 import Control.Arrow (first)
 import Data.Monoid (Sum(Sum), Product(Product))
@@ -41,12 +40,12 @@ instance Arbitrary a => Arbitrary (Sum a) where
 instance Arbitrary a => Arbitrary (Product a) where
   arbitrary = liftM Product arbitrary
 
--- de facto not unsafe because arbitrary lists are finite
+-- De facto not unsafe because arbitrary lists are finite:
+  
 instance Arbitrary FiniteExact where
   arbitrary = liftM2 construct arbitrary exponent
     where construct as p = unsafeFinite (Exact as p)
           exponent = fmap getNonNegative arbitrary
-
 
 instance EqProp FiniteExact where (=-=) = eq
 
@@ -63,16 +62,6 @@ instance Model (Sum Triad) (Sum Rational) where
 
 instance Model (Product Triad) (Product Rational) where
   model (Product a) = Product (model a)
-
--- The Data.Monoid module does not declare Sum and Product
--- to be functors.  Why not?  This would simplify the above
--- declarations to model = fmap model
-  
--- Alternatively, we could opt for a more generic approach:
--- since Rational is also a model for Triad directly, we could
--- lift Model over Sum and Product.  But then a model for an
--- additive monoid must be additive itself, which would exclude
--- things like exponential or logaritmic model functions.
 
 instance Model FiniteExact Triad where
   model = finiteExactToTriad

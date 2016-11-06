@@ -19,35 +19,31 @@ negateT2 O0 = O0
 negateT2 P1 = M1
 negateT2 P2 = M2
 
-
 -- We want to add ternary digits from the above range.
 -- Therefor we also need a bigger range: [-4..4]
 
 data T4 = Ma4 | Ma3 | Ma2 | Ma1 | Oa0 | Pa1 | Pa2 | Pa3 | Pa4
         deriving (Show, Eq, Enum)
 
-
--- To keep things simple and clean, we use the enum type class to
--- define the addition of ternary digits.  The round trip to the
--- integers could be avoided if we list all combinations explicitly.
--- Note how the conversion offsets cancel out.
+-- To keep things simple, we make a round trip to the integers using
+-- the Enum methods.  This is not very efficient, but good enough for
+-- now.  The conversion offsets cancel out.
+-- TODO: is it a hack to rely on Enum for this?
 
 addT2 :: T2 -> T2 -> T4
 addT2 a b = toEnum (fromEnum a + fromEnum b)
 
-
--- We do the same for multiplication, but must be extra careful using
--- methods from the Enum typeclass: the offsets do not compose nicely.
--- Alternatively, we could write out the 25 combinations explicitly,
--- or we could express it in terms of addition.
+-- We do the same for multiplication. We must be careful with the Enum
+-- methods: the offsets do not compose nicely.
 
 multiplyT2 :: T2 -> T2 -> T4
 multiplyT2 a b = toEnum (symm a * symm b + 4)
+  -- symm O0 = 0 
   where symm :: T2 -> Int
         symm x = fromEnum x - 2
 
 -- For some expressions to be T2, we need sub-expressions to be T1.
-        
+
 data T1 = M | O | P deriving (Show, Enum)
 
 addT1 :: T1 -> T1 -> T2

@@ -12,7 +12,7 @@ cross a b = zipKernelsWith addT2 (scalar b) (scalar a) `serial` plus
 
 -- I guess the pair (r,c) below will be recomputed many times.  This
 -- could be avoided using closures.  But currently I do not want to
--- hide any parameters or state inside closures. This would make it
+-- hide any parameters or state inside closures.  This would make it
 -- more difficult to understand the time and space complexity of the
 -- algorithms.
 

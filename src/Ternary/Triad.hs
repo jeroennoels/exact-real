@@ -11,7 +11,7 @@ import Ternary.Util (makeRational, assertNonNegative)
 data Triad = Triad Integer Integer deriving Show 
 
 makeTriad :: Integer -> Integer -> Triad
-makeTriad n p = Triad n (assertNonNegative "makeTriad" p)
+makeTriad n p = Triad n (assertNonNegative "Ternary.Triad (makeTriad)" p)
 
 triadNumerator :: Triad -> Integer
 triadNumerator (Triad n _) = n
@@ -19,20 +19,17 @@ triadNumerator (Triad n _) = n
 triadExponent :: Triad -> Integer
 triadExponent (Triad _ p) = p
 
-
 -- Not sure if this is better than the derived Eq instance.
 -- At least this one seems more consistent with Ord.
+
 instance Eq Triad where
   Triad n p == Triad m q = n * 3^q == m * 3^p
-
 
 instance Ord Triad where
   compare (Triad n p) (Triad m q) = compare (n * 3^q) (m * 3^p)
 
-
 instance Real Triad where
   toRational (Triad n p) = makeRational n (3^p) 
-
 
 instance Num Triad where
   abs (Triad n p) = Triad (abs n) p

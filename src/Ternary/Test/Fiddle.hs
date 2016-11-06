@@ -20,20 +20,20 @@ fiddlePair (O0,P2) = (P1,M1)
 fiddlePair (O0,P1) = (P1,M2)
 fiddlePair x = x
 
--- fiddle on some even positions 
+-- Fiddle on some even positions:
 fiddleEven :: [Bool] -> [T2] -> [T2]
 fiddleEven (q:qs) (a:b:cs) = if q then u:v:ws else a:b:ws
   where (u,v) = fiddlePair (a,b)
         ws = fiddleEven qs cs
 fiddleEven _ x = x
 
--- the basic fiddle that may act on positive pairs in even positions
+-- The basic fiddle that may act on positive pairs in even positions:
 fiddle :: [Bool] -> FiniteExact -> FiniteExact
 fiddle qs = unsafeApplyFinite (fiddleEven qs)
 
--- compose several ways of fiddling
--- shift to fiddle in odd positions too
--- employ the symmetry of negation
+-- Compose several ways of fiddling.
+-- Shift to fiddle in odd positions too.
+-- Employ the symmetry of negation.
 fiddleMore :: [Bool] -> [Bool] -> [Bool] -> FiniteExact -> FiniteExact
 fiddleMore p q r = negate . fiddle p . negate . fiddle q . shift . fiddle r
 

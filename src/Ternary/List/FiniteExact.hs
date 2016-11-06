@@ -60,14 +60,13 @@ offset (Finite (Exact _ p)) = p
 takeFinite :: Integral i => i -> Exact -> FiniteExact
 takeFinite n (Exact x p) = Finite $ Exact (genericTake n x) p
                                       
--- semantics
+-- Now we define the semantics of a finite list of T2 digits.
 
 phi :: [T2] -> Triad
 phi (a:as) = div3 (fromT2 a + phi as)
 phi [] = 0
 
 -- guaranteed to produce a finite list
-
 digitsT2 :: Integer -> [T2]
 digitsT2 k | k >= 0 = convert k
            | otherwise = map negateT2 (convert (-k))

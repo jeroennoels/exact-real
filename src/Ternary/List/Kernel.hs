@@ -2,7 +2,6 @@ module Ternary.List.Kernel where
 
 import Ternary.Core.Kernel
 
-
 -- intentionally undefined on finite data:
 
 recurse :: Kernel a b s -> [a] -> s -> [b]
