@@ -7,7 +7,6 @@ module Ternary.List.FiniteExact (
   triadToFiniteExact, finiteExactToTriad) where
 
 import Ternary.Core.Digit
-import Ternary.Core.Semantics
 import Ternary.List.Exact
 
 import Ternary.Triad

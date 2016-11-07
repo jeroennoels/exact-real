@@ -3,7 +3,6 @@
 module Ternary.Test.TestTernary where
 
 import Ternary.Core.Digit
-import Ternary.Core.Semantics
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.List.TernaryNum
@@ -156,4 +155,7 @@ qcSelf u v w = take 3 (selfList P1 P2 inp) == out
   where inp = [u, embedT1 v, w]
         out = [P1, addT1 M v, w]
 
-suite = testTriad ++ [testTernary, testAddition, alternativeTests]
+suite = testTriad ++ [testTernary,
+                      testAddition,
+                      testMultiplication,
+                      alternativeTests]
