@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 
-module Ternary.Test.TestTernary where
+module Ternary.TestTernary where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact
@@ -9,7 +9,7 @@ import Ternary.List.TernaryNum
 import Ternary.List.Aux
 import Ternary.Util
 import Ternary.Triad
-import Ternary.Test.Fiddle
+import Ternary.Fiddle
 
 import Control.Monad (liftM, liftM2)
 import Control.Arrow (first)

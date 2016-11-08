@@ -1,4 +1,4 @@
-module Ternary.Test.Fiddle (fiddleMore) where
+module Ternary.Fiddle (fiddleMore) where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact

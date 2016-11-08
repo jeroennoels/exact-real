@@ -1,4 +1,4 @@
-module Ternary.Test.TestKernel where
+module Ternary.TestKernel where
 
 import Ternary.Core.Kernel
 import Test.QuickCheck
