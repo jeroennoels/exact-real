@@ -3,7 +3,7 @@ module Ternary.Fiddle (fiddleMore) where
 import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
-import Ternary.List.TernaryNum
+import Ternary.List.FiniteExactNum
 
 -- Fiddle two subsequent digits in a way that preserves semantics.
 -- We only fiddle positive cases.

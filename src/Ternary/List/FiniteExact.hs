@@ -1,16 +1,13 @@
 module Ternary.List.FiniteExact (
-  FiniteExact, offset,
-  shift, shiftBy, takeFinite,
-  infiniteExact, finiteLength,
-  unwrapFinite, unsafeFinite,
+  FiniteExact,
+  offset, shift, shiftBy, takeFinite, integralPart,
+  infiniteExact, finiteLength, unwrapFinite, unsafeFinite,
   unsafeApplyFinite, unsafeLift, truncateLift,
   triadToFiniteExact, finiteExactToTriad) where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact
-
 import Ternary.Triad
-import Ternary.Util (digits)
 import Data.List (genericLength, genericTake)
 
 -- The main reason for having a dedicated FiniteExact type is that
@@ -58,18 +55,15 @@ offset (Finite (Exact _ p)) = p
                                       
 takeFinite :: Integral i => i -> Exact -> FiniteExact
 takeFinite n (Exact x p) = Finite $ Exact (genericTake n x) p
-                                      
+
+integralPart :: Exact -> FiniteExact
+integralPart exact@(Exact x p) = takeFinite p exact 
+
 -- Now we define the semantics of a finite list of T2 digits.
 
 phi :: [T2] -> Triad
 phi (a:as) = div3 (fromT2 a + phi as)
 phi [] = 0
-
--- guaranteed to produce a finite list
-digitsT2 :: Integer -> [T2]
-digitsT2 k | k >= 0 = convert k
-           | otherwise = map negateT2 (convert (-k))
-  where convert = map toT2 . digits 3
 
 finiteExactToTriad :: FiniteExact -> Triad
 finiteExactToTriad (Finite (Exact x p)) = exp3 p * phi x
@@ -80,7 +74,6 @@ triadToFiniteExact t
   | n < 0  = Finite $ Exact (prepend (-n) x) 0
   where x = digitsT2 (triadNumerator t)
         n = genericLength x - triadExponent t
-
 
 instance Eq FiniteExact where
   x == y = finiteExactToTriad x == finiteExactToTriad y

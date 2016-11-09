@@ -5,7 +5,7 @@ module Ternary.TestTernary where
 import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
-import Ternary.List.TernaryNum
+import Ternary.List.FiniteExactNum
 import Ternary.List.Aux
 import Ternary.Util
 import Ternary.Triad
