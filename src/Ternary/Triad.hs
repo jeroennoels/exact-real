@@ -5,8 +5,8 @@ module Ternary.Triad (
 
 import Ternary.Util (makeRational, assertNonNegative)
 
--- semantics of (Triad n p) is the rational number n/3^p
--- the exponent p is assumed to be non-negative
+-- Semantically (Triad n p) is the rational number n/3^p.
+-- The exponent p is assumed to be non-negative.
 
 data Triad = Triad Integer Integer deriving Show 
 
@@ -19,7 +19,7 @@ triadNumerator (Triad n _) = n
 triadExponent :: Triad -> Integer
 triadExponent (Triad _ p) = p
 
--- Not sure if this is better than the derived Eq instance.
+-- I am not sure if this is better than the derived Eq instance.
 -- At least this one seems more consistent with Ord.
 
 instance Eq Triad where
@@ -41,7 +41,6 @@ instance Num Triad where
     where s = max p q
           k = n * 3^(s-p) + m * 3^(s-q)
 
-
 reduce :: Integer -> Integer -> Triad
 reduce n 0 = Triad n 0
 reduce n p = if rem == 0
@@ -59,8 +58,8 @@ mul3 :: Triad -> Triad
 mul3 (Triad n 0) = fromInteger (3*n)
 mul3 (Triad n p) = makeTriad n (p-1)
 
-
 -- avoid large numerators when possible  
+
 exp3 :: Integer -> Triad
 exp3 k | k < 0 = Triad 0 (-k)
        | otherwise = fromInteger (3^k) 
