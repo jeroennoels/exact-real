@@ -3,7 +3,7 @@
 module Ternary.TestTernary where
 
 import Ternary.Core.Digit
-import Ternary.List.Exact
+import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum
 import Ternary.List.Aux

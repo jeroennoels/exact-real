@@ -13,6 +13,8 @@ prepend n as = genericReplicate nn O0 ++ as
         
 data Exact = Exact [T2] Integer deriving Show
 
+streamDigits :: Exact -> [T2]
+streamDigits (Exact x _) = x
 
 -- Only to be used with an argument that transforms infinite lists:
 unsafeApplyToDigits :: ([T2] -> [T2]) -> Exact -> Exact

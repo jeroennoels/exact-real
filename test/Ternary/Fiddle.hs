@@ -1,7 +1,6 @@
 module Ternary.Fiddle (fiddleMore) where
 
 import Ternary.Core.Digit
-import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum
 

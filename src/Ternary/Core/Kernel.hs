@@ -3,20 +3,19 @@ module Ternary.Core.Kernel (
   serial, chain, unsafeIgnoreInput,
   zipKernelsWith, transformFirstTwo) where
 
--- A kernel is a machine with an internal state of some type s.
--- This is such a fundamental type here, that I decided not to
--- hide the state.
+-- A kernel is a machine with an internal state.  This state is such a
+-- fundamental type here, that I decided not to hide it.
 
 type Kernel input output state = input -> state -> (output, state)
 
--- sequential composition
+-- Sequential composition
 
 serial :: Kernel a b s -> Kernel b c t -> Kernel a c (s,t)
 serial f g a (s,t) = let (b,u) = f a s
                          (c,v) = g b t
                      in (c,(u,v))
 
--- parallel composition
+-- Parallel composition
 
 zipKernelsWith ::
   (b -> d -> z) -> Kernel a b s -> Kernel c d t -> Kernel (a,c) z (s,t)
@@ -54,10 +53,12 @@ chain gen (p:ps) a (u:us) =
 chain _ [] a [] = (a,[])
 
 -- For a given state, a lazy kernel may or may not force its input.
--- If we know that the input is irrelevant, for a certain kernel in a
--- certain state, it makes not much sense to provide an arbitrary
--- value for the input.  I provide this function to keep that decision
--- in a single place.
+-- When we implement multiplication, we shall encounter the following
+-- situation: we want a particular machine to make a state transition,
+-- but we have no meaningful way to select an input value.  Moreover
+-- we know that the input is irrelevant for this kernel in that state.
+-- I do not want to choose an arbitrary value for the input.  For the
+-- moment I prefer to see an error when my assumptions are invalid.
 
 unsafeIgnoreInput :: Kernel a b s -> s -> (b,s)
 unsafeIgnoreInput f s = f ignore s
