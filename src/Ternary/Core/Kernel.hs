@@ -26,7 +26,8 @@ zipKernelsWith op f g (a,c) (s,t) = f a s `op1` g c t
 -- We need a state machine that transforms its input only during the
 -- first two cycles.
 
-data FirstTwoSteps =  Step0 | Step1 | After deriving Show
+data FirstTwoSteps = Step0 | Step1 | After
+                   deriving (Show, Eq, Ord)
 
 transformFirstTwo :: (a -> a) -> (a -> a) -> Kernel a a FirstTwoSteps
 transformFirstTwo f _ a Step0 = (f a, Step1)

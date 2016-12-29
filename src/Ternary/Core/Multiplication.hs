@@ -23,7 +23,8 @@ self a b = transformFirstTwo (const (embedT1 c)) (addT1 r . coerceT1)
 
 
 newtype TS = TS ((((Sa, Sa), Sa), FirstTwoSteps), Sa)
-
+           deriving (Show, Eq, Ord)
+                    
 initialTS :: TS
 initialTS = TS ((((Sa0, Sa0), Sa0), Step0), Sa0)
 
@@ -39,18 +40,16 @@ type AppliedTriangle s = Kernel T2 T2 s
 
 data TriangleParam = TriangleParam T2 T2
 
+class TriangleState s where
+  applyTriangle :: (T2,T2) -> TriangleParam -> AppliedTriangle s
+  initialState :: s
 
 makeTriangle :: TriangleParam -> Triangle ((((Sa, Sa), Sa), FirstTwoSteps), Sa)
 makeTriangle (TriangleParam a b) =
   zipKernelsWith addT2 (cross a b) (self a b) `serial` plus
 
-
-class TriangleState s where
-  applyTriangle :: (T2,T2) -> TriangleParam -> AppliedTriangle s
-  initialState :: s
-
 instance TriangleState TS where
-  applyTriangle ab p r (TS s) = second TS $ makeTriangle p (ab, r) s
+  applyTriangle ab p r (TS s) = second TS $ makeTriangle p (ab,r) s
   initialState = initialTS
   
 chained :: TriangleState s => (T2, T2) -> [TriangleParam] -> Kernel T2 T2 [s]

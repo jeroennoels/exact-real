@@ -5,7 +5,7 @@ import Ternary.Core.Digit
 
 -- The addition kernel needs only three states.
 
-data Sa = Sa0 | Sa1 | Sa2 deriving (Show, Eq)
+data Sa = Sa0 | Sa1 | Sa2 deriving (Show, Eq, Ord)
 
 -- The following I found using the Z3 solver!
 

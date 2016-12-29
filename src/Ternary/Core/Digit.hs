@@ -10,7 +10,7 @@ module Ternary.Core.Digit (
 -- The semantic mapping onto [-2..2] is defined below, but I hope it
 -- is already obvious from the names.
 
-data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq)
+data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq, Ord)
 
 -- We want to add and multiply ternary digits from the above range.
 -- Therefore we need a bigger range [-4..4] to hold intermediate
