@@ -34,7 +34,7 @@ addExact (Exact x p) (Exact y q) = Exact z (s+1)
 
 mul :: [T2] -> [T2] -> [T2]
 mul (x:xs) (y:ys) = recurse multKernel (zip xs ys) init
-  where init = MulState [TriangleParam x y] [initialTriangleState]
+  where init = MulState [TriangleParam x y] [initialTS]
 
 mulExact :: Exact -> Exact -> Exact
 mulExact (Exact x p) (Exact y q) = Exact (mul x y) (p+q+1)

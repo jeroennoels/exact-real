@@ -170,4 +170,3 @@ the same for all triangles.  For instance, the number "3" in the above
 picture abbreviates the pair (b3,a3).  The recursive channel receives
 input from the triangle before it.  The new (leftmost) triangle is
 kicked off with the * dummy that is ignored on the first transition.
-
