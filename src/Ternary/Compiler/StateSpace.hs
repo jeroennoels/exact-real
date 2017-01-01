@@ -6,6 +6,8 @@ import Ternary.Core.Digit
 import Ternary.Core.Multiplication
 
 import Ternary.Util (cross)
+
+import Control.Monad (liftM2)
 import Data.Set (Set, unions, union, difference, singleton)
 import qualified Data.Set as Set
 
@@ -40,4 +42,8 @@ allTransitions triangle = map f allInputs
 reachableStates :: TriangleParam -> Set TS
 reachableStates param = reachTransitively fs (singleton initialTS)
   where fs = allTransitions (makeTriangle param)
+
+-- Apparently only 157 out of 3^5 = 243 states are reachable
         
+allReachable = unions $ map reachableStates allParams
+  where allParams = liftM2 TriangleParam allT2 allT2
