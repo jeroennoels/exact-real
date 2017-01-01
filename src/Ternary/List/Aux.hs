@@ -16,4 +16,4 @@ scalarFiniteExact :: T2 -> FiniteExact -> FiniteExact
 scalarFiniteExact a = truncateLift 1 (scalarExact a)
 
 selfList :: T2 -> T2 -> [T2] -> [T2]
-selfList a b x = recurse (self a b) x Step0  
+selfList a b x = recurse (selfTerms a b) x Step0  

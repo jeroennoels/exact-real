@@ -2,10 +2,13 @@
 
 module Ternary.Util where
 
+import Control.Monad (liftM2)
 import Data.Monoid (Sum(Sum), Product(Product))
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
 
+cross :: [a] -> [b] -> [(a,b)]
+cross = liftM2 (,)
 
 eq3 :: Eq a => a -> a -> a -> Bool
 eq3 a b c = a == b && b == c

@@ -24,7 +24,7 @@ instance Arbitrary T1 where
   arbitrary = elements [M, O, P]
 
 instance Arbitrary T2 where
-  arbitrary = elements [M2, M1, O0, P1, P2]
+  arbitrary = elements allT2
 
 instance Arbitrary T4 where
   arbitrary = elements [Ma4, Ma3, Ma2, Ma1, Oa0, Pa1, Pa2, Pa3, Pa4]

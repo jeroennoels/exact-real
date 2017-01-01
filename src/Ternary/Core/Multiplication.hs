@@ -11,14 +11,14 @@ import Control.Arrow (second)
 scalar :: T2 -> Kernel T2 T2 Sa
 scalar a = plus . multiplyT2 a
 
-cross :: T2 -> T2 -> Kernel (T2, T2) T2 ((Sa, Sa), Sa)
-cross a b = zipKernelsWith addT2 (scalar b) (scalar a) `serial` plus 
+crossTerms :: T2 -> T2 -> Kernel (T2, T2) T2 ((Sa, Sa), Sa)
+crossTerms a b = zipKernelsWith addT2 (scalar b) (scalar a) `serial` plus 
 
 -- Perhaps the pair (c,r) below will be recomputed many times if the
 -- compiler fails to optimize this.  We worry about this later.
 
-self :: T2 -> T2 -> Kernel T2 T2 FirstTwoSteps
-self a b = transformFirstTwo (const (embedT1 c)) (addT1 r . coerceT1) 
+selfTerms :: T2 -> T2 -> Kernel T2 T2 FirstTwoSteps
+selfTerms a b = transformFirstTwo (const (embedT1 c)) (addT1 r . coerceT1) 
   where (c,r) = carry (multiplyT2 a b)
 
 
@@ -41,16 +41,19 @@ type AppliedTriangle s = Kernel T2 T2 s
 data TriangleParam = TriangleParam T2 T2
 
 class TriangleState s where
-  applyTriangle :: (T2,T2) -> TriangleParam -> AppliedTriangle s
   initialState :: s
+  makeTriangle :: TriangleParam -> Triangle s
 
-makeTriangle :: TriangleParam -> Triangle ((((Sa, Sa), Sa), FirstTwoSteps), Sa)
-makeTriangle (TriangleParam a b) =
-  zipKernelsWith addT2 (cross a b) (self a b) `serial` plus
+applyTriangle :: TriangleState s => (T2,T2) -> TriangleParam -> AppliedTriangle s
+applyTriangle ab param r state = makeTriangle param (ab,r) state 
+
+buildCircuit :: TriangleParam -> Triangle ((((Sa, Sa), Sa), FirstTwoSteps), Sa)
+buildCircuit (TriangleParam a b) =
+  zipKernelsWith addT2 (crossTerms a b) (selfTerms a b) `serial` plus
 
 instance TriangleState TS where
-  applyTriangle ab p r (TS s) = second TS $ makeTriangle p (ab,r) s
   initialState = initialTS
+  makeTriangle param input (TS s) = second TS $ buildCircuit param input s
   
 chained :: TriangleState s => (T2, T2) -> [TriangleParam] -> Kernel T2 T2 [s]
 chained = chain . applyTriangle

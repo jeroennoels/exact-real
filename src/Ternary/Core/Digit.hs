@@ -1,6 +1,6 @@
 module Ternary.Core.Digit (
   T1(..), T2(..), T4(..),
-  toT2, fromT1, fromT2, fromT4,
+  allT2, toT2, fromT1, fromT2, fromT4,
   negateT2, addT1, addT2, multiplyT2,
   coerceT1, embedT1, carry) where
 
@@ -11,6 +11,8 @@ module Ternary.Core.Digit (
 -- is already obvious from the names.
 
 data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq, Ord)
+
+allT2 = [M2, M1, O0, P1, P2]
 
 -- We want to add and multiply ternary digits from the above range.
 -- Therefore we need a bigger range [-4..4] to hold intermediate
