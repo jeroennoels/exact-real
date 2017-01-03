@@ -1,5 +1,5 @@
 module Ternary.Core.Kernel (
-  Kernel, FirstTwoSteps(Step0),
+  Kernel, FirstTwoSteps (Step0, Step1),
   serial, chain, unsafeIgnoreInput,
   zipKernelsWith, transformFirstTwo) where
 
