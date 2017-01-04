@@ -1,9 +1,11 @@
+-- No explicit exports.
+-- Typeclass instances are always exported?
 module Ternary.List.FiniteExactNum () where
 
 import Ternary.Core.Digit (T2(..))
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
-import Ternary.List.ExactNum
+import Ternary.List.ExactNum ()
 
 -- Derive the finite version from the infinite one.  Thus we avoid
 -- duplication and maximize test coverage.  Note that signum was

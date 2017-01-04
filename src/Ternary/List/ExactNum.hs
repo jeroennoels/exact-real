@@ -1,9 +1,11 @@
+-- No explicit exports.
+-- Typeclass instances are always exported?
 module Ternary.List.ExactNum () where
 
-import Ternary.Core.Digit
-import Ternary.Core.Addition
+import Ternary.Core.Digit (T2(..), addT2, negateT2)
+import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
-import Ternary.List.Kernel
+import Ternary.List.Kernel (recurse)
 import Ternary.List.Exact
 
 negateDigits :: [T2] -> [T2]
