@@ -1,4 +1,9 @@
-module Ternary.Core.Multiplication where
+module Ternary.Core.Multiplication (
+  Triangle, TriangleState, TS,
+  TriangleParam (TriangleParam),
+  MulState (MulState),
+  scalar, selfTerms,
+  initialTS, multKernel) where
 
 import Ternary.Core.Kernel
 import Ternary.Core.Digit

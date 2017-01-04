@@ -1,25 +1,24 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Ternary.Compiler.StateSpace where
 
-import Ternary.Core.Kernel
 import Ternary.Core.Digit
 import Ternary.Core.Multiplication
-
 import Ternary.Util (cross)
+
 import Control.Monad (liftM2)
 import Data.Maybe (fromJust)
 import Data.Set (Set, unions, union, difference, singleton)
 import qualified Data.Set as Set
 
-collect :: Ord a => Set (Maybe a) -> Set a
-collect as = Set.map fromJust $ Set.delete Nothing as   
+collectSuccess :: Ord a => Set (Maybe a) -> Set a
+collectSuccess as = Set.map fromJust $ Set.delete Nothing as   
 
 -- elements that can be reached in one step
 
 reach :: forall a b . Ord b => Set a -> [a -> Maybe b] -> Set b
 reach from = unions . map range
-   where range :: (a -> Maybe b) -> Set b
-         range f = collect $ Set.map f from
+  where range :: (a -> Maybe b) -> Set b
+        range f = collectSuccess $ Set.map f from
 
 -- elements that can be reached recursively
 
@@ -30,9 +29,12 @@ reachTransitively fs from = fst $ grow (from,from)
           | Set.null previous = pair 
           | otherwise = let next = reach previous fs `difference` acc
                         in grow (acc `union` next, next)
-
+        
 allInputs :: [((T2, T2), T2)]
 allInputs = allT2 `cross` allT2 `cross` allT2
+
+-- Remember: on the second step, the recursive channel of a triangle
+-- only accepts input between -1 and 1.
 
 validInputForState :: TriangleState s => ((T2, T2), T2) -> s -> Bool
 validInputForState (_,r) s
@@ -59,6 +61,12 @@ allParams = liftM2 TriangleParam allT2 allT2
 tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b) 
 tag a bs = Set.map section bs where section b = (a,b)
 
-statesWithParams :: Set (TriangleParam, TS)
-statesWithParams = unions $ map tagStates allParams
+stateBundle :: Set (TriangleParam, TS)
+stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
+
+encode :: (TriangleParam, TS) -> Int
+encode x = Set.findIndex x stateBundle
+
+decode :: Int -> (TriangleParam, TS)
+decode i = Set.elemAt i stateBundle

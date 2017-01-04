@@ -34,13 +34,13 @@ instance Arbitrary Triad where
     where exponent = fmap getNonNegative arbitrary
 
 instance Arbitrary a => Arbitrary (Sum a) where
-  arbitrary = liftM Sum arbitrary 
+  arbitrary = liftM Sum arbitrary
 
 instance Arbitrary a => Arbitrary (Product a) where
   arbitrary = liftM Product arbitrary
 
 -- De facto not unsafe because arbitrary lists are finite:
-  
+
 instance Arbitrary FiniteExact where
   arbitrary = liftM2 construct arbitrary exponent
     where construct as p = unsafeFinite (Exact as p)
@@ -71,7 +71,7 @@ instance Model (Sum FiniteExact) (Sum Triad) where
 instance Model (Product FiniteExact) (Product Triad) where
   model (Product a) = Product (model a)
 
--- for brevity 
+-- for brevity
 exact :: Integer -> FiniteExact
 exact = fromInteger
 
@@ -111,14 +111,15 @@ alternativeTests =
   ("Alternative tests - using other ways to generate test data",
    [("Exact integer addition", property qcExactIntegerAddition),
     ("Exact integer multiplication", property qcExactIntegerMultiplication),
-    ("Scalar multiplication", property qcScalar)])
+    ("Scalar multiplication", property qcScalar),
+    ("Multiplication self terms", property qcSelf)])
 
 qcExactIntegerAddition :: Integer -> Integer -> Bool
 qcExactIntegerAddition m n = exact n + exact m == exact (n+m)
- 
+
 qcExactIntegerMultiplication :: Integer -> Integer -> Bool
 qcExactIntegerMultiplication m n = exact n * exact m == exact (n*m)
- 
+
 qcTriadExactConversion = inverse finiteExactToTriad triadToFiniteExact
 
 qcFiddle :: [Bool] -> [Bool] -> [Bool] -> FiniteExact -> Bool
@@ -134,7 +135,7 @@ qcMultiplyT2 a b = fromT4 (multiplyT2 a b) == fromT2 a * fromT2 b
 qcCombinedPropertiesT2 :: T2 -> Bool
 qcCombinedPropertiesT2 a = let na = negateT2 a
   in eq3 (multiplyT2 P2 a) (multiplyT2 M2 na) (addT2 a a) &&
-     eq3 (multiplyT2 P1 a) (multiplyT2 M1 na) (addT2 a O0) && 
+     eq3 (multiplyT2 P1 a) (multiplyT2 M1 na) (addT2 a O0) &&
      multiplyT2 O0 a == Oa0
 
 qcCommutativeOpsT2 :: Property
@@ -142,7 +143,7 @@ qcCommutativeOpsT2 = isCommutable addT2 .&&. isCommutable multiplyT2
 
 qcCarry :: T4 -> Bool
 qcCarry a = let (c,r) = carry a
-  in fromT4 a == 3 * fromT1 c + fromT1 r 
+  in fromT4 a == 3 * fromT1 c + fromT1 r
 
 qcScalar :: T2 -> Integer -> Bool
 qcScalar a n = scalarFiniteExact a (fromInteger n) == fromInteger (fromT2 a * n)
