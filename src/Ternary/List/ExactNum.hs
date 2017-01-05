@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -- No explicit exports.
 -- Typeclass instances are always exported?
 module Ternary.List.ExactNum () where
@@ -34,9 +36,13 @@ addExact (Exact x p) (Exact y q) = Exact z (s+1)
   where s = max p q
         z = add (prepend (s-p) x) (prepend (s-q) y) 
 
-mul :: [T2] -> [T2] -> [T2]
-mul (x:xs) (y:ys) = recurse multKernel (zip xs ys) init
-  where init = MulState [TriangleParam x y] [initialTS]
+mul :: forall s . MultiplicationState s => s -> [T2] -> [T2] -> [T2]
+mul _ (x:xs) (y:ys) = recurse kernel (zip xs ys) (init::s)
+  where init = initialMultiplicationState (TriangleParam x y)
+
+-- algorithm selection
+fineStructure :: MulState TS
+fineStructure = undefined
 
 mulExact :: Exact -> Exact -> Exact
-mulExact (Exact x p) (Exact y q) = Exact (mul x y) (p+q+1)
+mulExact (Exact x p) (Exact y q) = Exact (mul fineStructure x y) (p+q+1)

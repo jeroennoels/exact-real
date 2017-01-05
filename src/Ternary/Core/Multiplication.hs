@@ -1,5 +1,7 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 module Ternary.Core.Multiplication (
-  Triangle, TriangleState, TS,
+  Triangle, TriangleState, TS, MultiplicationState (..),
   TriangleParam (TriangleParam),
   MulState (MulState),
   scalar, selfTerms,
@@ -77,3 +79,11 @@ multKernel ab (MulState ps us) =
   let (out, vs) = step ab ps us
       p = uncurry TriangleParam $ ab
   in (out, MulState (p:ps) (initialState:vs))
+
+class MultiplicationState s where
+  kernel :: Kernel (T2,T2) T2 s
+  initialMultiplicationState :: TriangleParam -> s
+
+instance MultiplicationState (MulState TS) where
+  kernel = multKernel
+  initialMultiplicationState p = MulState [p] [initialTS]
