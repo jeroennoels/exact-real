@@ -3,11 +3,14 @@ module Ternary.List.FiniteExact (
   offset, shift, shiftBy, takeFinite, integralPart,
   infiniteExact, finiteLength, unwrapFinite, unsafeFinite,
   unsafeApplyFinite, unsafeLift, truncateLift,
-  triadToFiniteExact, finiteExactToTriad) where
+  triadToFiniteExact, finiteExactToTriad,
+  finiteAddition, finiteMultiplication) where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.Triad
+import Ternary.Util (Binop)
+
 import Data.List (genericLength, genericTake)
 
 -- The main reason for having a dedicated FiniteExact type is that
@@ -25,7 +28,9 @@ infiniteExact (Finite (Exact x p)) = Exact (x ++ repeat O0) p
 unsafeApplyFinite :: ([T2] -> [T2]) -> FiniteExact -> FiniteExact
 unsafeApplyFinite f (Finite (Exact x p)) = Finite (Exact (f x) p)
 
--- when you know the given function transforms finite to finite
+-- Only use the following when you know the given function transforms
+-- finite to finite:
+
 unsafeLift :: (Exact -> Exact) -> FiniteExact -> FiniteExact
 unsafeLift f (Finite t) = Finite (f t) 
 
@@ -34,7 +39,8 @@ truncateLift n f x = takeFinite cut inf
   where inf = f (infiniteExact x)
         cut = n + finiteLength x
 
--- caller takes responsibility for ensuring finite data
+-- Here the caller takes responsibility for ensuring finite data:
+
 unsafeFinite :: Exact -> FiniteExact
 unsafeFinite = Finite
 
@@ -77,3 +83,23 @@ triadToFiniteExact t
 
 instance Eq FiniteExact where
   x == y = finiteExactToTriad x == finiteExactToTriad y
+
+
+-- Finally we define finite addition and multiplication in terms of
+-- their infinite cousins.  For addition, the difficulty is to cut off
+-- the infinite result at a safe length:
+
+finiteAddition :: Binop Exact -> Binop FiniteExact
+finiteAddition (++) x y = takeFinite cutoff infinite
+   where infinite = infiniteExact x ++ infiniteExact y
+         p = offset x
+         q = offset y
+         s = max p q
+         xlen = s-p + finiteLength x
+         ylen = s-q + finiteLength y
+         cutoff = max xlen ylen + 1
+
+finiteMultiplication :: Binop Exact -> Binop FiniteExact
+finiteMultiplication (**) x y = takeFinite cutoff infinite
+   where infinite = infiniteExact x ** infiniteExact y
+         cutoff = finiteLength x + finiteLength y + 1

@@ -7,6 +7,7 @@ import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum
 import Ternary.List.Aux
+import Ternary.QuickCheckUtil
 import Ternary.Util
 import Ternary.Triad
 import Ternary.Fiddle

@@ -1,6 +1,6 @@
 module Main where
 
 import Ternary.TestTernary
-import Ternary.Util
+import Ternary.QuickCheckUtil
 
 main = quickSuite suite

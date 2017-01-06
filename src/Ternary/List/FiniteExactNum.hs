@@ -3,7 +3,7 @@
 module Ternary.List.FiniteExactNum () where
 
 import Ternary.Core.Digit (T2(..))
-import Ternary.List.Exact (Exact(Exact))
+import Ternary.List.Exact (Exact(Exact), addExact, multiplyExact)
 import Ternary.List.FiniteExact
 import Ternary.List.ExactNum ()
 
@@ -16,8 +16,8 @@ instance Num FiniteExact where
   signum = safeSignum
   negate = unsafeLift negate
   fromInteger = integralPart . fromInteger
-  (+) = addFiniteExact
-  (*) = mulFiniteExact
+  (+) = finiteAddition (+)
+  (*) = finiteMultiplication (*)
 
 
 zero, one :: FiniteExact
@@ -30,22 +30,6 @@ safeSignum x = let (Exact ds _) = unwrapFinite x in sgn ds
         sgn (P2:_) = one
         sgn (P1:_) = one  -- valid only when the list is finite!
         sgn (O0:a) = sgn a
-        sgn (M1:_) = negate one          
+        sgn (M1:_) = negate one
         sgn (M2:_) = negate one
-        sgn [] = zero          
-
--- The difficulty is to cut off the infinite result at a safe length.
-addFiniteExact :: FiniteExact -> FiniteExact -> FiniteExact
-addFiniteExact x y = takeFinite cutoff infinite
-   where infinite = infiniteExact x + infiniteExact y
-         p = offset x
-         q = offset y
-         s = max p q
-         xlen = s-p + finiteLength x
-         ylen = s-q + finiteLength y
-         cutoff = max xlen ylen + 1
-
-mulFiniteExact :: FiniteExact -> FiniteExact -> FiniteExact
-mulFiniteExact x y = takeFinite cutoff infinite
-   where infinite = infiniteExact x * infiniteExact y
-         cutoff = finiteLength x + finiteLength y + 1
+        sgn [] = zero

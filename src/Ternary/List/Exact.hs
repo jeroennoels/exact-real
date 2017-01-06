@@ -1,8 +1,15 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Ternary.List.Exact where
 
-import Ternary.Core.Digit
-import Ternary.Util (assertNonNegative, digits)
 import Data.List (genericReplicate, genericLength)
+
+import Ternary.Util (assertNonNegative, digits, Binop)
+import Ternary.Core.Digit
+import Ternary.Core.Addition (plus, Sa(Sa0))
+import Ternary.Core.Multiplication
+import Ternary.List.Kernel (recurse)
+
 
 prepend :: Integral n => n -> [T2] -> [T2]
 prepend n as = genericReplicate nn O0 ++ as
@@ -17,10 +24,12 @@ streamDigits :: Exact -> [T2]
 streamDigits (Exact x _) = x
 
 -- Only to be used with an argument that transforms infinite lists:
+
 unsafeApplyToDigits :: ([T2] -> [T2]) -> Exact -> Exact
 unsafeApplyToDigits f (Exact x p) = Exact (f x) p
 
--- This is guaranteed to produce a finite list.
+-- This is guaranteed to produce a finite list:
+
 digitsT2 :: Integer -> [T2]
 digitsT2 k | k >= 0 = convert k
            | otherwise = map negateT2 (convert (-k))
@@ -29,3 +38,28 @@ digitsT2 k | k >= 0 = convert k
 integerToExact :: Integer -> Exact
 integerToExact n = Exact (x ++ repeat O0) (genericLength x)
   where x = digitsT2 n
+
+-- In the following section, we define addition and multiplication of
+-- exact numbers.
+
+add :: Binop [T2]
+add x y = recurse plus (zipWith addT2 x y) Sa0
+
+addExact :: Binop Exact
+addExact (Exact x p) (Exact y q) = Exact z (s+1)
+  where s = max p q
+        z = add (prepend (s-p) x) (prepend (s-q) y) 
+
+-- The purpose of the MultiplicationState argument is to select a
+-- particular kernel implementation.  Only its type matters, the value
+-- will not be forced.
+
+multiply :: forall s . MultiplicationState s => s -> Binop [T2]
+multiply _ (x:xs) (y:ys) = recurse kernel (zip xs ys) (init::s)
+  where init = initialMultiplicationState (TriangleParam x y)
+
+multiplyExact :: forall s . MultiplicationState s => s -> Binop Exact
+multiplyExact alg (Exact x p) (Exact y q) = Exact (multiply alg x y) (p+q+1)
+
+fineStructure :: MulState TS
+fineStructure = undefined

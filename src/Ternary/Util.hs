@@ -1,11 +1,8 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
 module Ternary.Util where
 
 import Control.Monad (liftM2)
-import Data.Monoid (Sum(Sum), Product(Product))
-import Test.QuickCheck
-import Test.QuickCheck.Checkers
+
+type Binop a = a -> a -> a
 
 cross :: [a] -> [b] -> [(a,b)]
 cross = liftM2 (,)
@@ -14,8 +11,8 @@ eq3 :: Eq a => a -> a -> a -> Bool
 eq3 a b c = a == b && b == c
 
 assertNonNegative :: (Ord a, Num a) => String -> a -> a
-assertNonNegative context x 
-  | x < 0 = error $ "negative number not allowed: " ++ context
+assertNonNegative context x
+  | x < 0 = error $ "Negative number not allowed: " ++ context
   | otherwise = x
 
 makeRational :: Integral a => a -> a -> Rational
@@ -28,18 +25,3 @@ digitsRev radix k = let (cont, last) = quotRem k radix
 
 digits :: Integral a => a -> a -> [a]
 digits radix = reverse . digitsRev radix
-
-flattenTests :: [TestBatch] -> [Test]
-flattenTests = concat . map unbatch
-
-quickSuite ::  [TestBatch] -> IO ()
-quickSuite = sequence_ . map quickBatch
-
-test n prop = quickCheckWithResult args prop
-  where args = stdArgs { maxSuccess = n, chatty = False}
-
-instance EqProp Rational where (=-=) = eq
-
-instance Eq a => EqProp (Sum a) where (=-=) = eq
-
-instance Eq a => EqProp (Product a) where (=-=) = eq

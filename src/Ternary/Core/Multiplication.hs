@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Ternary.Core.Multiplication (
-  Triangle, TriangleState, TS, MultiplicationState (..),
+  Triangle, TriangleState, TS,
+  MultiplicationState (..),
   TriangleParam (TriangleParam),
   MulState (MulState),
   scalar, selfTerms,
@@ -33,7 +34,7 @@ initialTS :: TS
 initialTS = TS ((((Sa0, Sa0), Sa0), Step0), Sa0)
 
 stepMatch :: FirstTwoSteps -> TS -> Bool
-stepMatch a (TS ((_, b), _)) = a == b 
+stepMatch a (TS ((_,b),_)) = a == b 
 
 type Triangle s = Kernel ((T2,T2), T2) T2 s
 
@@ -79,6 +80,7 @@ multKernel ab (MulState ps us) =
   let (out, vs) = step ab ps us
       p = uncurry TriangleParam $ ab
   in (out, MulState (p:ps) (initialState:vs))
+
 
 class MultiplicationState s where
   kernel :: Kernel (T2,T2) T2 s
