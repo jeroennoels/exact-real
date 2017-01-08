@@ -1,7 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+
 module Ternary.Compiler.StateSpace where
 
 import Ternary.Core.Digit
+import Ternary.Core.Kernel (Kernel)
 import Ternary.Core.Multiplication
 import Ternary.Util (cross)
 
@@ -11,7 +14,7 @@ import Data.Set (Set, unions, union, difference, singleton)
 import qualified Data.Set as Set
 
 collectSuccess :: Ord a => Set (Maybe a) -> Set a
-collectSuccess as = Set.map fromJust $ Set.delete Nothing as   
+collectSuccess as = Set.map fromJust $ Set.delete Nothing as
 
 -- elements that can be reached in one step
 
@@ -26,10 +29,10 @@ reachTransitively :: forall a . Ord a => [a -> Maybe a] -> Set a -> Set a
 reachTransitively fs from = fst $ grow (from,from)
   where grow :: (Set a, Set a) -> (Set a, Set a)
         grow pair@(acc,previous)
-          | Set.null previous = pair 
+          | Set.null previous = pair
           | otherwise = let next = reach previous fs `difference` acc
                         in grow (acc `union` next, next)
-        
+
 allInputs :: [((T2, T2), T2)]
 allInputs = allT2 `cross` allT2 `cross` allT2
 
@@ -38,7 +41,7 @@ allInputs = allT2 `cross` allT2 `cross` allT2
 
 validInputForState :: TriangleState s => ((T2, T2), T2) -> s -> Bool
 validInputForState (_,r) s
-  | isSecondState s = r `elem` [M1,O0,P1] 
+  | isSecondState s = r `elem` [M1,O0,P1]
   | otherwise = True
 
 allTransitions :: TriangleState s => Triangle s -> [s -> Maybe s]
@@ -47,7 +50,7 @@ allTransitions triangle = map f allInputs
            if validInputForState i s
            then Just (snd (triangle i s))
            else Nothing
-         
+
 reachableStates :: TriangleParam -> Set TS
 reachableStates param = reachTransitively fs (singleton initialTS)
   where fs = allTransitions (makeTriangle param)
@@ -58,15 +61,33 @@ allParams = liftM2 TriangleParam allT2 allT2
 -- Apparently only 157 out of 3^5 = 243 states are reachable:
 -- Set.size $ unions $ map reachableStates allParams
 
-tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b) 
+tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b)
 tag a bs = Set.map section bs where section b = (a,b)
 
 stateBundle :: Set (TriangleParam, TS)
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
-encode :: (TriangleParam, TS) -> Int
+
+type CodePoint = Int
+
+encode :: (TriangleParam, TS) -> CodePoint
 encode x = Set.findIndex x stateBundle
 
-decode :: Int -> (TriangleParam, TS)
+decode :: CodePoint -> (TriangleParam, TS)
 decode i = Set.elemAt i stateBundle
+
+universalTriangle :: Triangle CodePoint
+universalTriangle input codePoint = (out, encode (param, nextState))
+  where (param, state) = decode codePoint
+        (out, nextState) = makeTriangle param input state
+
+
+instance TriangleState CodePoint where
+  initialState param = encode (param, initialState param)
+  makeTriangle = const universalTriangle
+  isSecondState = undefined 
+
+-- algorithm selector
+preComputedTriangles :: MulState CodePoint
+preComputedTriangles = undefined

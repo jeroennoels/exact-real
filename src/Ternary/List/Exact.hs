@@ -10,7 +10,6 @@ import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
 import Ternary.List.Kernel (recurse)
 
-
 prepend :: Integral n => n -> [T2] -> [T2]
 prepend n as = genericReplicate nn O0 ++ as
   where nn = assertNonNegative "Ternary.List.Exact (prepend)" n 
@@ -58,8 +57,5 @@ multiply :: forall s . MultiplicationState s => s -> Binop [T2]
 multiply _ (x:xs) (y:ys) = recurse kernel (zip xs ys) (init::s)
   where init = initialMultiplicationState (TriangleParam x y)
 
-multiplyExact :: forall s . MultiplicationState s => s -> Binop Exact
+multiplyExact :: MultiplicationState s => s -> Binop Exact
 multiplyExact alg (Exact x p) (Exact y q) = Exact (multiply alg x y) (p+q+1)
-
-fineStructure :: MulState TS
-fineStructure = undefined

@@ -4,7 +4,7 @@ module Ternary.List.ExactNum () where
 
 import Ternary.Core.Digit (T2(..), negateT2)
 import Ternary.List.Exact
-
+import Ternary.Core.Multiplication (fineStructure)
 
 negateDigits :: [T2] -> [T2]
 negateDigits = map negateT2

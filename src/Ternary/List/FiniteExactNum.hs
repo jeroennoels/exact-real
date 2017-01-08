@@ -16,8 +16,8 @@ instance Num FiniteExact where
   signum = safeSignum
   negate = unsafeLift negate
   fromInteger = integralPart . fromInteger
-  (+) = finiteAddition (+)
-  (*) = finiteMultiplication (*)
+  (+) = finitizeAdd (+)
+  (*) = finitizeMult (*)
 
 
 zero, one :: FiniteExact

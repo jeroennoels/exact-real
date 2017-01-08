@@ -4,12 +4,15 @@ module Ternary.List.FiniteExact (
   infiniteExact, finiteLength, unwrapFinite, unsafeFinite,
   unsafeApplyFinite, unsafeLift, truncateLift,
   triadToFiniteExact, finiteExactToTriad,
-  finiteAddition, finiteMultiplication) where
+  finitizeAdd, finitizeMult,
+  multiplyAltFS, multiplyAltPCT) where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.Triad
 import Ternary.Util (Binop)
+import Ternary.Core.Multiplication (fineStructure)
+import Ternary.Compiler.StateSpace (preComputedTriangles)
 
 import Data.List (genericLength, genericTake)
 
@@ -89,8 +92,8 @@ instance Eq FiniteExact where
 -- their infinite cousins.  For addition, the difficulty is to cut off
 -- the infinite result at a safe length:
 
-finiteAddition :: Binop Exact -> Binop FiniteExact
-finiteAddition (++) x y = takeFinite cutoff infinite
+finitizeAdd :: Binop Exact -> Binop FiniteExact
+finitizeAdd (++) x y = takeFinite cutoff infinite
    where infinite = infiniteExact x ++ infiniteExact y
          p = offset x
          q = offset y
@@ -99,7 +102,13 @@ finiteAddition (++) x y = takeFinite cutoff infinite
          ylen = s-q + finiteLength y
          cutoff = max xlen ylen + 1
 
-finiteMultiplication :: Binop Exact -> Binop FiniteExact
-finiteMultiplication (**) x y = takeFinite cutoff infinite
+finitizeMult :: Binop Exact -> Binop FiniteExact
+finitizeMult (**) x y = takeFinite cutoff infinite
    where infinite = infiniteExact x ** infiniteExact y
          cutoff = finiteLength x + finiteLength y + 1
+
+multiplyAltFS :: Binop FiniteExact
+multiplyAltFS = finitizeMult $ multiplyExact fineStructure
+
+multiplyAltPCT :: Binop FiniteExact
+multiplyAltPCT = finitizeMult $ multiplyExact preComputedTriangles

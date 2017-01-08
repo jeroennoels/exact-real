@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Ternary.Core.Multiplication (
-  Triangle, TriangleState, TS,
+  Triangle, TS, TriangleState (..),
   MultiplicationState (..),
   TriangleParam (TriangleParam),
   MulState (MulState),
   scalar, selfTerms,
-  initialTS, multKernel) where
+  initialTS, multKernel, fineStructure) where
 
 import Ternary.Core.Kernel
 import Ternary.Core.Digit
@@ -50,7 +50,7 @@ data TriangleParam = TriangleParam T2 T2
                    deriving (Show, Eq, Ord)
 
 class TriangleState s where
-  initialState :: s
+  initialState :: TriangleParam -> s
   isSecondState :: s -> Bool
   makeTriangle :: TriangleParam -> Triangle s
 
@@ -63,7 +63,7 @@ buildCircuit (TriangleParam a b) =
 
 
 instance TriangleState TS where
-  initialState = initialTS
+  initialState = const initialTS
   isSecondState = stepMatch Step1
   makeTriangle param input (TS s) = second TS $ buildCircuit param input s
   
@@ -79,13 +79,17 @@ multKernel :: TriangleState s => Kernel (T2,T2) T2 (MulState s)
 multKernel ab (MulState ps us) =
   let (out, vs) = step ab ps us
       p = uncurry TriangleParam $ ab
-  in (out, MulState (p:ps) (initialState:vs))
+  in (out, MulState (p:ps) (initialState p:vs))
 
 
 class MultiplicationState s where
   kernel :: Kernel (T2,T2) T2 s
   initialMultiplicationState :: TriangleParam -> s
 
-instance MultiplicationState (MulState TS) where
+instance TriangleState s => MultiplicationState (MulState s) where
   kernel = multKernel
-  initialMultiplicationState p = MulState [p] [initialTS]
+  initialMultiplicationState p = MulState [p] [initialState p]
+
+-- algorithm selector
+fineStructure :: MulState TS
+fineStructure = undefined

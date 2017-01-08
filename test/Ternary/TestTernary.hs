@@ -110,16 +110,23 @@ testMultiplication = first ("Multiplicative FiniteExact - " ++) $
 alternativeTests :: TestBatch
 alternativeTests =
   ("Alternative tests - using other ways to generate test data",
-   [("Exact integer addition", property qcExactIntegerAddition),
-    ("Exact integer multiplication", property qcExactIntegerMultiplication),
-    ("Scalar multiplication", property qcScalar),
-    ("Multiplication self terms", property qcSelf)])
+   [("Exact integer addition",
+     property qcIntegerAddition),
+    ("Integer multiplication, alternative 1",
+     property $ qcIntegerMultiplication multiplyAltFS),
+    ("Integer multiplication, alternative 2",
+     property $ qcIntegerMultiplication multiplyAltPCT),
+    ("Scalar multiplication",
+     property qcScalar),
+    ("Multiplication self terms",
+     property qcSelf)])
 
-qcExactIntegerAddition :: Integer -> Integer -> Bool
-qcExactIntegerAddition m n = exact n + exact m == exact (n+m)
+qcIntegerAddition :: Integer -> Integer -> Bool
+qcIntegerAddition m n = exact n + exact m == exact (n+m)
 
-qcExactIntegerMultiplication :: Integer -> Integer -> Bool
-qcExactIntegerMultiplication m n = exact n * exact m == exact (n*m)
+qcIntegerMultiplication :: Ternary.Util.Binop FiniteExact ->
+                           Integer -> Integer -> Bool
+qcIntegerMultiplication (**) m n = exact n ** exact m == exact (n*m)
 
 qcTriadExactConversion = inverse finiteExactToTriad triadToFiniteExact
 
