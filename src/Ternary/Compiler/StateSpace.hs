@@ -68,7 +68,6 @@ stateBundle :: Set (TriangleParam, TS)
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
-
 type CodePoint = Int
 
 encode :: (TriangleParam, TS) -> CodePoint
@@ -89,5 +88,8 @@ instance TriangleState CodePoint where
   isSecondState = undefined 
 
 -- algorithm selector
-preComputedTriangles :: MulState CodePoint
-preComputedTriangles = undefined
+integerEncoding :: MulState CodePoint
+integerEncoding = undefined
+
+warmup :: Bool
+warmup = sum (map encode $ Set.toList stateBundle) == 1898326

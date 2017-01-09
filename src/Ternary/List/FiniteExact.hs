@@ -5,16 +5,19 @@ module Ternary.List.FiniteExact (
   unsafeApplyFinite, unsafeLift, truncateLift,
   triadToFiniteExact, finiteExactToTriad,
   finitizeAdd, finitizeMult,
-  multiplyAltFS, multiplyAltPCT) where
+  multiplyAltFS, multiplyAltIE) where
+
+import Data.List (genericLength, genericTake)
 
 import Ternary.Core.Digit
-import Ternary.List.Exact
 import Ternary.Triad
 import Ternary.Util (Binop)
 import Ternary.Core.Multiplication (fineStructure)
-import Ternary.Compiler.StateSpace (preComputedTriangles)
-
-import Data.List (genericLength, genericTake)
+import Ternary.Compiler.StateSpace (integerEncoding)
+import Ternary.List.Exact hiding (
+  multiplyAltIE, multiplyAltFS)
+import qualified Ternary.List.Exact as Exact (
+  multiplyAltIE, multiplyAltFS)
 
 -- The main reason for having a dedicated FiniteExact type is that
 -- QuickCheck tests will give us finite lists as test data.  So we
@@ -108,7 +111,7 @@ finitizeMult (**) x y = takeFinite cutoff infinite
          cutoff = finiteLength x + finiteLength y + 1
 
 multiplyAltFS :: Binop FiniteExact
-multiplyAltFS = finitizeMult $ multiplyExact fineStructure
+multiplyAltFS = finitizeMult $ Exact.multiplyAltFS
 
-multiplyAltPCT :: Binop FiniteExact
-multiplyAltPCT = finitizeMult $ multiplyExact preComputedTriangles
+multiplyAltIE :: Binop FiniteExact
+multiplyAltIE = finitizeMult $ Exact.multiplyAltIE

@@ -115,7 +115,7 @@ alternativeTests =
     ("Integer multiplication, alternative 1",
      property $ qcIntegerMultiplication multiplyAltFS),
     ("Integer multiplication, alternative 2",
-     property $ qcIntegerMultiplication multiplyAltPCT),
+     property $ qcIntegerMultiplication multiplyAltIE),
     ("Scalar multiplication",
      property qcScalar),
     ("Multiplication self terms",

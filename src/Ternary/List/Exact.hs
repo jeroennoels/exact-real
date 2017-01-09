@@ -9,6 +9,8 @@ import Ternary.Core.Digit
 import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
 import Ternary.List.Kernel (recurse)
+import Ternary.Compiler.StateSpace (integerEncoding)
+
 
 prepend :: Integral n => n -> [T2] -> [T2]
 prepend n as = genericReplicate nn O0 ++ as
@@ -59,3 +61,10 @@ multiply _ (x:xs) (y:ys) = recurse kernel (zip xs ys) (init::s)
 
 multiplyExact :: MultiplicationState s => s -> Binop Exact
 multiplyExact alg (Exact x p) (Exact y q) = Exact (multiply alg x y) (p+q+1)
+
+
+multiplyAltFS :: Binop Exact
+multiplyAltFS = multiplyExact fineStructure
+
+multiplyAltIE :: Binop Exact
+multiplyAltIE = multiplyExact integerEncoding
