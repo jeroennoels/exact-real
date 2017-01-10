@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
-module Ternary.Compiler.StateSpace where
+module Ternary.Compiler.StateSpace (
+  integerEncoding, warmup) where
 
 import Ternary.Core.Digit
 import Ternary.Core.Kernel (Kernel)
@@ -10,7 +10,7 @@ import Ternary.Util (cross)
 
 import Control.Monad (liftM2)
 import Data.Maybe (fromJust)
-import Data.Set (Set, unions, union, difference, singleton)
+import Data.Set (Set, unions, union, difference, singleton, toList)
 import qualified Data.Set as Set
 
 collectSuccess :: Ord a => Set (Maybe a) -> Set a
@@ -68,17 +68,21 @@ stateBundle :: Set (TriangleParam, TS)
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
-type CodePoint = Int
+
+newtype CodePoint = CodePoint Int
+
+unwrap :: CodePoint -> Int
+unwrap (CodePoint i) = i
 
 encode :: (TriangleParam, TS) -> CodePoint
-encode x = Set.findIndex x stateBundle
+encode x = CodePoint $ Set.findIndex x stateBundle
 
 decode :: CodePoint -> (TriangleParam, TS)
-decode i = Set.elemAt i stateBundle
+decode (CodePoint i) = Set.elemAt i stateBundle
 
 universalTriangle :: Triangle CodePoint
-universalTriangle input codePoint = (out, encode (param, nextState))
-  where (param, state) = decode codePoint
+universalTriangle input code = (out, encode (param, nextState))
+  where (param, state) = decode code
         (out, nextState) = makeTriangle param input state
 
 
@@ -92,4 +96,4 @@ integerEncoding :: MulState CodePoint
 integerEncoding = undefined
 
 warmup :: Bool
-warmup = sum (map encode $ Set.toList stateBundle) == 1898326
+warmup = sum (map (unwrap . encode) (toList stateBundle)) == 1898326
