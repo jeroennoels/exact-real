@@ -133,17 +133,20 @@ appliedUniversalTriangleAssoc :: (T2,T2) -> [(Int,Int)]
 appliedUniversalTriangleAssoc ab = toAssoc (appliedUniversalTriangle ab) [0..n]
   where n = 5 * Set.size stateBundle - 1
 
-applyTriangle' :: (T2,T2) -> ignore -> AppliedTriangle CodePoint
-applyTriangle' ab _ r code = factor $ toArrayMemo ab `unsafeAt` combine (r,code)
+applyTriangle' :: (T2,T2) -> (T2,CodePoint) -> (T2,CodePoint)
+applyTriangle' ab pair = factor $ memo ab `unsafeAt` combine pair
 
-chained' :: (T2, T2) -> Kernel T2 T2 [CodePoint]
-chained' ab r codes = chain (applyTriangle' ab) codes r codes  
+chain' :: ((a,s) -> (a,s)) -> Kernel a a [s]
+chain' f a (u:us) =
+  let (b,v) = f (a,u)
+      (c,vs) = b `seq` chain' f b us
+  in (c,v:vs)
+chain' _ a [] = (a,[])
 
 step' :: (T2,T2) -> [CodePoint] -> (T2, [CodePoint])
-step' ab = chained' ab O0  -- unsafeIgnoreInput no longer works 
+step' ab = chain' (applyTriangle' ab) O0 -- unsafeIgnoreInput no longer works 
 
 newtype MulState2 = MulState2 [CodePoint]
-
 
 multKernel' :: Kernel (T2,T2) T2 MulState2
 multKernel' ab (MulState2 us) =
@@ -166,4 +169,4 @@ toArray ab = array (0, length list) list
 
 arrays = toAssoc toArray (allT2 `cross` allT2)
 
-toArrayMemo ab = fromJust $ lookup ab arrays
+memo ab = fromJust $ lookup ab arrays
