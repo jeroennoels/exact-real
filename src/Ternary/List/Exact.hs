@@ -9,7 +9,7 @@ import Ternary.Core.Digit
 import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
 import Ternary.List.Kernel (recurse)
-import Ternary.Compiler.StateSpace (integerEncoding)
+import Ternary.Compiler.StateSpace (integerEncoding, explore)
 
 
 prepend :: Integral n => n -> [T2] -> [T2]
@@ -67,4 +67,4 @@ multiplyAltFS :: Binop Exact
 multiplyAltFS = multiplyExact fineStructure
 
 multiplyAltIE :: Binop Exact
-multiplyAltIE = multiplyExact integerEncoding
+multiplyAltIE = multiplyExact explore --integerEncoding

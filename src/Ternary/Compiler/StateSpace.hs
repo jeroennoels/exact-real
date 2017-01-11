@@ -1,10 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ternary.Compiler.StateSpace (
-  integerEncoding, warmup) where
+  integerEncoding, explore, warmup) where
 
 import Ternary.Core.Digit
-import Ternary.Core.Kernel (Kernel)
+import Ternary.Core.Kernel
 import Ternary.Core.Multiplication
 import Ternary.Util (cross)
 
@@ -12,6 +12,10 @@ import Control.Monad (liftM2)
 import Data.Maybe (fromJust)
 import Data.Set (Set, unions, union, difference, singleton, toList)
 import qualified Data.Set as Set
+
+import Data.Array.Unboxed
+import Data.Array.Base (unsafeAt)
+import Data.List (lookup)
 
 collectSuccess :: Ord a => Set (Maybe a) -> Set a
 collectSuccess as = Set.map fromJust $ Set.delete Nothing as
@@ -59,7 +63,13 @@ reachableStates param = reachTransitively fs (singleton initialTS)
 allParams = liftM2 TriangleParam allT2 allT2
 
 -- Apparently only 157 out of 3^5 = 243 states are reachable:
--- Set.size $ unions $ map reachableStates allParams
+allReachableStates :: Set TS
+allReachableStates = unions $ map reachableStates allParams
+
+-- And 75 of them are special:
+allSecondStates :: Set TS
+allSecondStates = Set.filter isSecondState allReachableStates
+
 
 tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b)
 tag a bs = Set.map section bs where section b = (a,b)
@@ -68,8 +78,8 @@ stateBundle :: Set (TriangleParam, TS)
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
-
 newtype CodePoint = CodePoint Int
+
 
 unwrap :: CodePoint -> Int
 unwrap (CodePoint i) = i
@@ -97,3 +107,63 @@ integerEncoding = undefined
 
 warmup :: Bool
 warmup = sum (map (unwrap . encode) (toList stateBundle)) == 1898326
+
+-- pointer arithmetic
+
+combine :: (T2, CodePoint) -> Int
+combine (c, CodePoint p) = 5*p + fromEnum c
+
+factor :: Int -> (T2, CodePoint)
+factor i = (toEnum r, CodePoint q)
+  where (q,r) = quotRem i 5
+
+appliedUniversalTriangle :: (T2,T2) -> Int -> Int
+appliedUniversalTriangle ab i =
+  let (c,code) = factor i
+      (_,state) = decode code
+  in if isSecondState state && c `elem` [M2,P2]
+     then -1  -- this is ugly
+     else combine $ universalTriangle (ab,c) code
+
+toAssoc :: (a -> b) -> [a] -> [(a,b)]
+toAssoc f = map graph
+  where graph a = (a, f a)
+
+appliedUniversalTriangleAssoc :: (T2,T2) -> [(Int,Int)]        
+appliedUniversalTriangleAssoc ab = toAssoc (appliedUniversalTriangle ab) [0..n]
+  where n = 5 * Set.size stateBundle - 1
+
+applyTriangle' :: (T2,T2) -> ignore -> AppliedTriangle CodePoint
+applyTriangle' ab _ r code = factor $ toArrayMemo ab `unsafeAt` combine (r,code)
+
+chained' :: (T2, T2) -> Kernel T2 T2 [CodePoint]
+chained' ab r codes = chain (applyTriangle' ab) codes r codes  
+
+step' :: (T2,T2) -> [CodePoint] -> (T2, [CodePoint])
+step' ab = chained' ab O0  -- unsafeIgnoreInput no longer works 
+
+newtype MulState2 = MulState2 [CodePoint]
+
+
+multKernel' :: Kernel (T2,T2) T2 MulState2
+multKernel' ab (MulState2 us) =
+  let (out, vs) = step' ab us
+      p = uncurry TriangleParam $ ab
+  in (out, MulState2 (initialState p:vs))
+
+
+instance MultiplicationState MulState2 where
+  kernel = multKernel'
+  initialMultiplicationState p = MulState2 [initialState p]
+
+-- algorithm selector
+explore :: MulState2
+explore = undefined
+
+toArray :: (T2,T2) -> UArray Int Int
+toArray ab = array (0, length list) list
+  where list = appliedUniversalTriangleAssoc ab
+
+arrays = toAssoc toArray (allT2 `cross` allT2)
+
+toArrayMemo ab = fromJust $ lookup ab arrays
