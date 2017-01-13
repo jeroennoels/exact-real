@@ -23,7 +23,7 @@ timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y = 
   warmup
   >> force n x
-  >> force n x
+  >> force n y
   >> time multiplyAltFS
   >> time multiplyAltIE
   where time (**) = timeIt $ force n (x ** y)
