@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ternary.Compiler.StateSpace (
-  integerEncoding, explore, warmup) where
+  integerEncoding, explore, warmup') where
 
 import Ternary.Core.Digit
 import Ternary.Core.Kernel
@@ -108,6 +108,7 @@ integerEncoding = undefined
 warmup :: Bool
 warmup = sum (map (unwrap . encode) (toList stateBundle)) == 1898326
 
+
 -- pointer arithmetic
 
 combine :: (T2, CodePoint) -> Int
@@ -170,3 +171,6 @@ toArray ab = array (0, length list) list
 arrays = toAssoc toArray (allT2 `cross` allT2)
 
 memo ab = fromJust $ lookup ab arrays
+
+warmup' :: Bool
+warmup' = 7239 == (sum $ map ((`unsafeAt` 0) . snd) arrays)
