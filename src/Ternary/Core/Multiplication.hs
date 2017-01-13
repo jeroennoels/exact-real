@@ -73,7 +73,8 @@ chained = chain . applyTriangle
 data MulState s = MulState [TriangleParam] [s]
 
 step :: TriangleState s => (T2,T2) -> [TriangleParam] -> [s] -> (T2, [s])
-step ab ps = unsafeIgnoreInput $ chained ab ps
+step ab ps = chained ab ps irrelevant
+  where irrelevant = undefined :: T2
 
 multKernel :: TriangleState s => Kernel (T2,T2) T2 (MulState s)
 multKernel ab (MulState ps us) =

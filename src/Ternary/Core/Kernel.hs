@@ -1,7 +1,6 @@
 module Ternary.Core.Kernel (
   Kernel, FirstTwoSteps (Step0, Step1),
-  serial, chain, unsafeIgnoreInput,
-  zipKernelsWith, transformFirstTwo) where
+  serial, chain, zipKernelsWith, transformFirstTwo) where
 
 -- A kernel is a machine with an internal state.  This state is such a
 -- fundamental type here, that I decided not to hide it.
