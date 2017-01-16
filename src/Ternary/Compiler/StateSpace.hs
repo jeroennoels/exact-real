@@ -181,7 +181,7 @@ explore :: MulState2
 explore = undefined
 
 toArray :: (T2,T2) -> UArray Int Int16
-toArray ab = array (0, length list) list
+toArray ab = array (0, length list - 1) list
   where list = appliedUniversalTriangleAssoc ab
 
 arrays = toAssoc toArray (allT2 `cross` allT2)
