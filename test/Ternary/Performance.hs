@@ -21,7 +21,7 @@ b = fromInteger (sample + 4534559768568798745315467656587857878567654645)
 force :: Int -> Exact -> IO ()
 force n x = streamDigits x !! n `seq` return ()
 
-performance = timeMultiplication 1000 a b
+performance = timeMultiplication 1500 a b
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y = 
@@ -30,8 +30,6 @@ timeMultiplication n x y =
   >> force n y
   >> time multiplyAltFS
   >> time multiplyAltIE
-  >> timeIt (force 1000000 (z1+z2))
-  >> timeIt (putStrLn $ show $ map (const 1)  (streamDigits z1) !! 5000000)
   where time (**) = timeIt $ force n (x ** y)
 
 z1 = Exact (cycle ds) 0 where ds = [M2,M1,O0,P1,P2]
