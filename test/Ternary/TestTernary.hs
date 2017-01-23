@@ -9,7 +9,7 @@ import Ternary.List.FiniteExactNum
 import Ternary.List.Aux
 import Ternary.QuickCheckUtil
 import Ternary.Util.Misc
-import Ternary.Triad
+import Ternary.Util.Triad
 import Ternary.Fiddle
 
 import Control.Monad (liftM, liftM2)

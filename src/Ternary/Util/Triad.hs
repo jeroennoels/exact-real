@@ -1,6 +1,5 @@
-module Ternary.Triad (
-  Triad, 
-  makeTriad, triadNumerator, triadExponent,
+module Ternary.Util.Triad (
+  Triad, makeTriad, triadNumerator, triadExponent,
   reduceTriad, div3, mul3, exp3) where
 
 import Ternary.Util.Misc (makeRational, assertNonNegative)

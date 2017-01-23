@@ -7,37 +7,17 @@ import Ternary.Core.Digit
 import Ternary.Core.Kernel
 import Ternary.Core.Multiplication
 import Ternary.Util.Misc (cross)
+import Ternary.Util.TransitiveClosure (reachTransitively)
 
 import Control.Monad (liftM2)
 import Data.Maybe (fromJust)
-import Data.Set (Set, unions, union, difference, singleton, toList)
-import qualified Data.Set as Set
-
 import Data.Array.Unboxed
 import Data.Array.Base (unsafeAt)
 import Data.List (lookup)
-
 import GHC.Int (Int16)
+import Data.Set (Set, unions, singleton, toList)
+import qualified Data.Set as Set
 
-collectSuccess :: Ord a => Set (Maybe a) -> Set a
-collectSuccess as = Set.map fromJust $ Set.delete Nothing as
-
--- elements that can be reached in one step
-
-reach :: forall a b . Ord b => Set a -> [a -> Maybe b] -> Set b
-reach from = unions . map range
-  where range :: (a -> Maybe b) -> Set b
-        range f = collectSuccess $ Set.map f from
-
--- elements that can be reached recursively
-
-reachTransitively :: forall a . Ord a => [a -> Maybe a] -> Set a -> Set a
-reachTransitively fs from = fst $ grow (from,from)
-  where grow :: (Set a, Set a) -> (Set a, Set a)
-        grow pair@(acc,previous)
-          | Set.null previous = pair
-          | otherwise = let next = reach previous fs `difference` acc
-                        in grow (acc `union` next, next)
 
 allInputs :: [((T2, T2), T2)]
 allInputs = allT2 `cross` allT2 `cross` allT2

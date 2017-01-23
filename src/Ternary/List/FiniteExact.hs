@@ -10,7 +10,7 @@ module Ternary.List.FiniteExact (
 import Data.List (genericLength, genericTake)
 
 import Ternary.Core.Digit
-import Ternary.Triad
+import Ternary.Util.Triad
 import Ternary.Util.Misc (Binop)
 import Ternary.Core.Multiplication (fineStructure)
 import Ternary.Compiler.StateSpace (integerEncoding)
