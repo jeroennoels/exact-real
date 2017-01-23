@@ -1,4 +1,4 @@
-module Ternary.Util where
+module Ternary.Util.Misc where
 
 import Control.Monad (liftM2)
 

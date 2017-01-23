@@ -4,7 +4,7 @@ module Ternary.List.Exact where
 
 import Data.List (genericReplicate, genericLength)
 
-import Ternary.Util (assertNonNegative, digits, Binop)
+import Ternary.Util.Misc (assertNonNegative, digits, Binop)
 import Ternary.Core.Digit
 import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication

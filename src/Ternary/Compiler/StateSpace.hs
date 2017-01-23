@@ -6,7 +6,7 @@ module Ternary.Compiler.StateSpace (
 import Ternary.Core.Digit
 import Ternary.Core.Kernel
 import Ternary.Core.Multiplication
-import Ternary.Util (cross)
+import Ternary.Util.Misc (cross)
 
 import Control.Monad (liftM2)
 import Data.Maybe (fromJust)

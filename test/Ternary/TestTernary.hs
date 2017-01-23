@@ -8,7 +8,7 @@ import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum
 import Ternary.List.Aux
 import Ternary.QuickCheckUtil
-import Ternary.Util
+import Ternary.Util.Misc
 import Ternary.Triad
 import Ternary.Fiddle
 
@@ -17,7 +17,7 @@ import Control.Arrow (first)
 import Data.Monoid (Sum(Sum), Product(Product))
 
 import Test.QuickCheck
-import Test.QuickCheck.Checkers
+import Test.QuickCheck.Checkers hiding (Binop)
 import Test.QuickCheck.Utils (isCommutable)
 import Test.QuickCheck.Classes
 
@@ -124,8 +124,7 @@ alternativeTests =
 qcIntegerAddition :: Integer -> Integer -> Bool
 qcIntegerAddition m n = exact n + exact m == exact (n+m)
 
-qcIntegerMultiplication :: Ternary.Util.Binop FiniteExact ->
-                           Integer -> Integer -> Bool
+qcIntegerMultiplication :: Binop FiniteExact -> Integer -> Integer -> Bool
 qcIntegerMultiplication (**) m n = exact n ** exact m == exact (n*m)
 
 qcTriadExactConversion = inverse finiteExactToTriad triadToFiniteExact

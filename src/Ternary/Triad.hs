@@ -3,7 +3,7 @@ module Ternary.Triad (
   makeTriad, triadNumerator, triadExponent,
   reduceTriad, div3, mul3, exp3) where
 
-import Ternary.Util (makeRational, assertNonNegative)
+import Ternary.Util.Misc (makeRational, assertNonNegative)
 
 -- Semantically (Triad n p) is the rational number n/3^p.
 -- The exponent p is assumed to be non-negative.
