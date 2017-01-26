@@ -4,4 +4,5 @@ import Ternary.TestTernary
 import Ternary.Performance
 import Ternary.QuickCheckUtil
 
-main = quickSuite suite >> performance
+main = quickSuite suite >>
+       performance

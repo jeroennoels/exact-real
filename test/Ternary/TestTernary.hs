@@ -40,8 +40,7 @@ instance Arbitrary a => Arbitrary (Sum a) where
 instance Arbitrary a => Arbitrary (Product a) where
   arbitrary = liftM Product arbitrary
 
--- De facto not unsafe because arbitrary lists are finite:
-
+-- safe because arbitrary lists are always finite
 instance Arbitrary FiniteExact where
   arbitrary = liftM2 construct arbitrary exponent
     where construct as p = unsafeFinite (Exact as p)
@@ -75,6 +74,48 @@ instance Model (Product FiniteExact) (Product Triad) where
 -- for brevity
 exact :: Integer -> FiniteExact
 exact = fromInteger
+
+qcIntegerAddition :: Integer -> Integer -> Bool
+qcIntegerAddition m n = exact n + exact m == exact (n+m)
+
+qcIntegerMultiplication :: Binop FiniteExact -> Integer -> Integer -> Bool
+qcIntegerMultiplication (**) m n = exact n ** exact m == exact (n*m)
+
+qcTriadExactConversion = inverse finiteExactToTriad triadToFiniteExact
+
+qcFiddle :: [Bool] -> [Bool] -> [Bool] -> FiniteExact -> Bool
+qcFiddle p q r x = fiddleMore p q r x == x
+
+qcAddT2 :: T2 -> T2 -> Bool
+qcAddT2 a b = fromT4 (addT2 a b) == fromT2 a + fromT2 b
+
+qcMultiplyT2 :: T2 -> T2 -> Bool
+qcMultiplyT2 a b = fromT4 (multiplyT2 a b) == fromT2 a * fromT2 b
+
+qcCombinedPropertiesT2 :: T2 -> Bool
+qcCombinedPropertiesT2 a = let na = negateT2 a
+  in eq3 (multiplyT2 P2 a) (multiplyT2 M2 na) (addT2 a a) &&
+     eq3 (multiplyT2 P1 a) (multiplyT2 M1 na) (addT2 a O0) &&
+     multiplyT2 O0 a == Oa0
+
+qcCommutativeOpsT2 :: Property
+qcCommutativeOpsT2 = isCommutable addT2 .&&. isCommutable multiplyT2
+
+qcCarry :: T4 -> Bool
+qcCarry a = let (c,r) = carry a
+  in fromT4 a == 3 * fromT1 c + fromT1 r
+
+qcScalar :: T2 -> Integer -> Bool
+qcScalar a n = scalarFiniteExact a (fromInteger n) == fromInteger (fromT2 a * n)
+
+-- Use an interesting hard-coded example to test the self kernel
+-- carry (P1 * P2) = (P,M) ~ (P1,M)
+
+qcSelf :: T2 -> T1 -> T2 -> Bool
+qcSelf u v w = take 3 (selfList P1 P2 inp) == out
+  where inp = [u, embedT1 v, w]
+        out = [P1, addT1 M v, w]
+
 
 triad :: Triad
 triad = undefined
@@ -112,58 +153,18 @@ alternativeTests =
   ("Alternative tests - using other ways to generate test data",
    [("Exact integer addition",
      property qcIntegerAddition),
-    ("Integer multiplication, alternative 1",
+    ("Integer multiplication 1",
      property $ qcIntegerMultiplication multiplyAltFS),
-    ("Integer multiplication, alternative 2",
+    ("Integer multiplication 2",
      property $ qcIntegerMultiplication multiplyAltIE),
     ("Scalar multiplication",
      property qcScalar),
     ("Multiplication self terms",
      property qcSelf)])
+  
 
-qcIntegerAddition :: Integer -> Integer -> Bool
-qcIntegerAddition m n = exact n + exact m == exact (n+m)
-
-qcIntegerMultiplication :: Binop FiniteExact -> Integer -> Integer -> Bool
-qcIntegerMultiplication (**) m n = exact n ** exact m == exact (n*m)
-
-qcTriadExactConversion = inverse finiteExactToTriad triadToFiniteExact
-
-qcFiddle :: [Bool] -> [Bool] -> [Bool] -> FiniteExact -> Bool
-qcFiddle p q r x = fiddleMore p q r x == x
-
-qcAddT2 :: T2 -> T2 -> Bool
-qcAddT2 a b = fromT4 (addT2 a b) == fromT2 a + fromT2 b
-
-qcMultiplyT2 :: T2 -> T2 -> Bool
-qcMultiplyT2 a b = fromT4 (multiplyT2 a b) == fromT2 a * fromT2 b
-
-
-qcCombinedPropertiesT2 :: T2 -> Bool
-qcCombinedPropertiesT2 a = let na = negateT2 a
-  in eq3 (multiplyT2 P2 a) (multiplyT2 M2 na) (addT2 a a) &&
-     eq3 (multiplyT2 P1 a) (multiplyT2 M1 na) (addT2 a O0) &&
-     multiplyT2 O0 a == Oa0
-
-qcCommutativeOpsT2 :: Property
-qcCommutativeOpsT2 = isCommutable addT2 .&&. isCommutable multiplyT2
-
-qcCarry :: T4 -> Bool
-qcCarry a = let (c,r) = carry a
-  in fromT4 a == 3 * fromT1 c + fromT1 r
-
-qcScalar :: T2 -> Integer -> Bool
-qcScalar a n = scalarFiniteExact a (fromInteger n) == fromInteger (fromT2 a * n)
-
--- Use an interesting hard-coded example to test the self kernel
--- carry (P1 * P2) = (P,M) ~ (P1,M)
-
-qcSelf :: T2 -> T1 -> T2 -> Bool
-qcSelf u v w = take 3 (selfList P1 P2 inp) == out
-  where inp = [u, embedT1 v, w]
-        out = [P1, addT1 M v, w]
-
-suite = testTriad ++ [testTernary,
-                      testAddition,
-                      testMultiplication,
-                      alternativeTests]
+suite = testTriad ++
+        [testTernary,
+         testAddition,
+         testMultiplication,
+         alternativeTests]

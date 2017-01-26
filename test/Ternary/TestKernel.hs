@@ -1,7 +1,8 @@
-module Ternary.TestKernel where
+module Ternary.TestKernel (
+  qcChain, testChainForSpaceLeak) where
 
 import Ternary.Core.Kernel
-import Test.QuickCheck
+
 
 type S = Int
 
@@ -12,6 +13,6 @@ qcChain :: Int -> Int -> Int -> S -> S -> Bool
 qcChain n0 n1 a0 s0 s1 = 
   let (a1,t0) = fancyKernel n0 a0 s0
       (a2,t1) = fancyKernel n1 a1 s1
-  in chain fancyKernel [n0,n1] a0 [s0,s1] == (a2,[t0,t1])
+  in chain fancyKernel [n0,n1] a0 [s0,s1] == (a2, [t0,t1])
 
 testChainForSpaceLeak n = fst $ chain fancyKernel [1..n] 0 [1..n]
