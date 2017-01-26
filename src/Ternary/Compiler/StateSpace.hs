@@ -1,37 +1,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ternary.Compiler.StateSpace (
-  integerEncoding, warmup) where
+  integerEncoding, explore, warmup) where
 
 import Ternary.Core.Digit
-import Ternary.Core.Kernel (Kernel)
+import Ternary.Core.Kernel
 import Ternary.Core.Multiplication
-import Ternary.Util (cross)
+import Ternary.Util.Misc (cross)
+import Ternary.Util.TransitiveClosure (reachTransitively)
 
 import Control.Monad (liftM2)
 import Data.Maybe (fromJust)
-import Data.Set (Set, unions, union, difference, singleton, toList)
+import Data.Array.Unboxed
+import Data.Array.Base (unsafeAt)
+import Data.List (lookup)
+import GHC.Int (Int16)
+import Data.Set (Set, unions, singleton, toList)
 import qualified Data.Set as Set
 
-collectSuccess :: Ord a => Set (Maybe a) -> Set a
-collectSuccess as = Set.map fromJust $ Set.delete Nothing as
-
--- elements that can be reached in one step
-
-reach :: forall a b . Ord b => Set a -> [a -> Maybe b] -> Set b
-reach from = unions . map range
-  where range :: (a -> Maybe b) -> Set b
-        range f = collectSuccess $ Set.map f from
-
--- elements that can be reached recursively
-
-reachTransitively :: forall a . Ord a => [a -> Maybe a] -> Set a -> Set a
-reachTransitively fs from = fst $ grow (from,from)
-  where grow :: (Set a, Set a) -> (Set a, Set a)
-        grow pair@(acc,previous)
-          | Set.null previous = pair
-          | otherwise = let next = reach previous fs `difference` acc
-                        in grow (acc `union` next, next)
 
 allInputs :: [((T2, T2), T2)]
 allInputs = allT2 `cross` allT2 `cross` allT2
@@ -59,7 +45,13 @@ reachableStates param = reachTransitively fs (singleton initialTS)
 allParams = liftM2 TriangleParam allT2 allT2
 
 -- Apparently only 157 out of 3^5 = 243 states are reachable:
--- Set.size $ unions $ map reachableStates allParams
+allReachableStates :: Set TS
+allReachableStates = unions $ map reachableStates allParams
+
+-- And 75 of them are special:
+allSecondStates :: Set TS
+allSecondStates = Set.filter isSecondState allReachableStates
+
 
 tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b)
 tag a bs = Set.map section bs where section b = (a,b)
@@ -68,17 +60,17 @@ stateBundle :: Set (TriangleParam, TS)
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
+newtype CodePoint = CodePoint Int16
 
-newtype CodePoint = CodePoint Int
 
-unwrap :: CodePoint -> Int
-unwrap (CodePoint i) = i
+unwrap :: Integral a => CodePoint -> a
+unwrap (CodePoint i) = fromIntegral i
 
 encode :: (TriangleParam, TS) -> CodePoint
-encode x = CodePoint $ Set.findIndex x stateBundle
+encode x = CodePoint $ fromIntegral (Set.findIndex x stateBundle)
 
 decode :: CodePoint -> (TriangleParam, TS)
-decode (CodePoint i) = Set.elemAt i stateBundle
+decode (CodePoint i) = Set.elemAt (fromIntegral i) stateBundle
 
 universalTriangle :: Triangle CodePoint
 universalTriangle input code = (out, encode (param, nextState))
@@ -95,5 +87,83 @@ instance TriangleState CodePoint where
 integerEncoding :: MulState CodePoint
 integerEncoding = undefined
 
+
+-- pointer arithmetic
+
+{-# INLINE combine #-}
+combine :: (T2, CodePoint) -> Int
+combine (c, CodePoint p) = 5 * fromIntegral p + fromEnum c
+
+combine' :: (T2, CodePoint) -> Int16
+combine' (c, CodePoint p) = fromIntegral p + 2048 * fromIntegral (fromEnum c)
+
+-- quotRem is slow!
+{-# INLINE factor #-}
+factor :: Int16 -> (T2, CodePoint)
+factor i | i < 2048 = (M2, CodePoint $ i)
+factor i | i < 4096 = (M1, CodePoint $ i - 2048)
+factor i | i < 6144 = (O0, CodePoint $ i - 4096)
+factor i | i < 8192 = (P1, CodePoint $ i - 6144)
+factor i            = (P2, CodePoint $ i - 8192)
+
+factor' :: Int -> (T2, CodePoint)
+factor' i = (toEnum r, CodePoint (fromIntegral q))
+  where (q,r) = quotRem i 5
+
+
+appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
+appliedUniversalTriangle ab i =
+  let (c,code) = factor' i
+      (_,state) = decode code
+  in if isSecondState state && c `elem` [M2,P2]
+     then -1  -- this is ugly
+     else combine' (universalTriangle (ab,c) code)
+
+toAssoc :: (a -> b) -> [a] -> [(a,b)]
+toAssoc f = map graph
+  where graph a = (a, f a)
+
+appliedUniversalTriangleAssoc :: (T2,T2) -> [(Int,Int16)]        
+appliedUniversalTriangleAssoc ab = toAssoc (appliedUniversalTriangle ab) [0..n]
+  where n = 5 * Set.size stateBundle - 1
+
+applyTriangle' :: (T2,T2) -> (T2,CodePoint) -> (T2,CodePoint)
+applyTriangle' ab pair = factor $ memo ab `unsafeAt` combine pair
+
+chain' :: ((a,s) -> (a,s)) -> Kernel a a [s]
+chain' f a (u:us) =
+  let (b,v) = f (a,u)
+      (c,vs) = b `seq` chain' f b us
+  in (c,v:vs)
+chain' _ a [] = (a,[])
+
+step' :: (T2,T2) -> [CodePoint] -> (T2, [CodePoint])
+step' ab = chain' (applyTriangle' ab) O0 -- unsafeIgnoreInput no longer works 
+
+newtype MulState2 = MulState2 [CodePoint]
+
+multKernel' :: Kernel (T2,T2) T2 MulState2
+multKernel' ab (MulState2 us) =
+  let (out, vs) = step' ab us
+      p = uncurry TriangleParam $ ab
+  in (out, MulState2 (initialState p:vs))
+
+
+instance MultiplicationState MulState2 where
+  kernel = multKernel'
+  initialMultiplicationState p = MulState2 [initialState p]
+
+-- algorithm selector
+explore :: MulState2
+explore = undefined
+
+toArray :: (T2,T2) -> UArray Int Int16
+toArray ab = array (0, length list - 1) list
+  where list = appliedUniversalTriangleAssoc ab
+
+arrays = toAssoc toArray (allT2 `cross` allT2)
+
+memo ab = fromJust $ lookup ab arrays
+
 warmup :: Bool
-warmup = sum (map (unwrap . encode) (toList stateBundle)) == 1898326
+warmup = sum (map ((!0) . snd) arrays) == -19043

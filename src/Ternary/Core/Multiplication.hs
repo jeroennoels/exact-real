@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Ternary.Core.Multiplication (
-  Triangle, TS, TriangleState (..),
+  Triangle, AppliedTriangle, TS,
+  TriangleState (..),
   MultiplicationState (..),
   TriangleParam (TriangleParam),
   MulState (MulState),
@@ -70,11 +71,11 @@ instance TriangleState TS where
 chained :: TriangleState s => (T2, T2) -> [TriangleParam] -> Kernel T2 T2 [s]
 chained = chain . applyTriangle
 
-data MulState s = MulState [TriangleParam] [s]
-
 step :: TriangleState s => (T2,T2) -> [TriangleParam] -> [s] -> (T2, [s])
 step ab ps = chained ab ps irrelevant
   where irrelevant = undefined :: T2
+
+data MulState s = MulState [TriangleParam] [s]
 
 multKernel :: TriangleState s => Kernel (T2,T2) T2 (MulState s)
 multKernel ab (MulState ps us) =

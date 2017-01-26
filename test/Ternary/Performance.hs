@@ -2,28 +2,39 @@ module Ternary.Performance where
 
 import System.TimeIt
 
+import Ternary.Core.Digit (T2(..))
 import Ternary.List.Exact
 import Ternary.List.ExactNum
-import Ternary.Compiler.StateSpace (integerEncoding)
-import qualified Ternary.Compiler.StateSpace as Compiler (warmup)
+import Ternary.Compiler.StateSpace (warmup)
+import Ternary.QuickCheckUtil
 
-warmup :: IO ()
-warmup = if Compiler.warmup then putStrLn "warmup" else error "warmup"
+randomT2s :: Int -> [T2]              
+randomT2s seed = map toEnum (randomsR seed (0,4))
 
--- arbitrary example
-a :: Exact
-a = fromInteger 357800390534009434539909653135500117687989767357547658790854546577
+assertWarm :: IO ()
+assertWarm = timeIt $ putStr (text ++ "      ")
+  where text = "  Warmup: " ++ if warmup then "done" else "error"
 
 force :: Int -> Exact -> IO ()
 force n x = streamDigits x !! n `seq` return ()
-
-performance = timeMultiplication 200 a a
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y = 
   warmup
   >> force n x
   >> force n y
+  >> putStr "  Fine Structure    "
   >> time multiplyAltFS
+  >> putStr "  Integer Encoding  "  
   >> time multiplyAltIE
   where time (**) = timeIt $ force n (x ** y)
+
+
+a,b :: Exact
+a = Exact (randomT2s 0) 0
+b = Exact (randomT2s 1) 0
+
+performance =
+  putStrLn "\nPerformance:"
+  >> assertWarm
+  >> timeMultiplication 1000 a b

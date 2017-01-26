@@ -10,14 +10,12 @@ module Ternary.List.FiniteExact (
 import Data.List (genericLength, genericTake)
 
 import Ternary.Core.Digit
-import Ternary.Triad
-import Ternary.Util (Binop)
+import Ternary.Util.Triad
+import Ternary.Util.Misc (Binop)
 import Ternary.Core.Multiplication (fineStructure)
 import Ternary.Compiler.StateSpace (integerEncoding)
-import Ternary.List.Exact hiding (
-  multiplyAltIE, multiplyAltFS)
-import qualified Ternary.List.Exact as Exact (
-  multiplyAltIE, multiplyAltFS)
+import Ternary.List.Exact hiding (multiplyAltIE, multiplyAltFS)
+import qualified Ternary.List.Exact as Exact (multiplyAltIE, multiplyAltFS)
 
 -- The main reason for having a dedicated FiniteExact type is that
 -- QuickCheck tests will give us finite lists as test data.  So we

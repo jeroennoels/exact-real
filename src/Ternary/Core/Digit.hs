@@ -10,7 +10,7 @@ module Ternary.Core.Digit (
 -- The semantic mapping onto [-2..2] is defined below, but I hope it
 -- is already obvious from the names.
 
-data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq, Ord)
+data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq, Ord, Enum)
 
 allT2 = [M2, M1, O0, P1, P2]
 
