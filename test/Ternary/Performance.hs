@@ -20,8 +20,7 @@ force n x = streamDigits x !! n `seq` return ()
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y = 
-  warmup
-  >> force n x
+  force n x
   >> force n y
   >> putStr "  Fine Structure    "
   >> time multiplyAltFS
