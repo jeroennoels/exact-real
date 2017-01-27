@@ -24,23 +24,22 @@ allInputs = allT2 `cross` allT2 `cross` allT2
 
 -- Remember: on the second step, the recursive channel of a triangle
 -- only accepts input between -1 and 1.
-
 validInputForState :: TriangleState s => ((T2, T2), T2) -> s -> Bool
 validInputForState (_,r) s
   | isSecondState s = r `elem` [M1,O0,P1]
   | otherwise = True
 
+-- For some inputs, the corresponding transition function is partial.
 allTransitions :: TriangleState s => Triangle s -> [s -> Maybe s]
 allTransitions triangle = map f allInputs
    where f i s =
            if validInputForState i s
-           then Just (snd (triangle i s))
+           then Just $ snd (triangle i s)
            else Nothing
 
-reachableStates :: TriangleParam -> Set TS
-reachableStates param = reachTransitively fs (singleton initialTS)
+reachableStates :: (Ord s, TriangleState s) => TriangleParam -> Set s
+reachableStates param = reachTransitively fs (singleton $ initialState param)
   where fs = allTransitions (makeTriangle param)
-
 
 allParams = liftM2 TriangleParam allT2 allT2
 
@@ -52,16 +51,16 @@ allReachableStates = unions $ map reachableStates allParams
 allSecondStates :: Set TS
 allSecondStates = Set.filter isSecondState allReachableStates
 
-
 tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b)
 tag a bs = Set.map section bs where section b = (a,b)
 
+-- For every triangle parametrization, we have a set of reachable
+-- states.  Here we make a disjoint union of all these sets.
 stateBundle :: Set (TriangleParam, TS)
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
 newtype CodePoint = CodePoint Int16
-
 
 unwrap :: Integral a => CodePoint -> a
 unwrap (CodePoint i) = fromIntegral i
@@ -87,9 +86,7 @@ instance TriangleState CodePoint where
 integerEncoding :: MulState CodePoint
 integerEncoding = undefined
 
-
 -- pointer arithmetic
-
 {-# INLINE combine #-}
 combine :: (T2, CodePoint) -> Int
 combine (c, CodePoint p) = 5 * fromIntegral p + fromEnum c
@@ -118,6 +115,7 @@ appliedUniversalTriangle ab i =
   in if isSecondState state && c `elem` [M2,P2]
      then -1  -- this is ugly
      else combine' (universalTriangle (ab,c) code)
+
 
 toAssoc :: (a -> b) -> [a] -> [(a,b)]
 toAssoc f = map graph
