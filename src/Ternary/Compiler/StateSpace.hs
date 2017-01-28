@@ -80,7 +80,7 @@ universalTriangle input code = (out, encode (param, nextState))
 instance TriangleState CodePoint where
   initialState param = encode (param, initialState param)
   makeTriangle = const universalTriangle
-  isSecondState = undefined 
+  isSecondState = isSecondState . snd . decode
 
 -- algorithm selector
 integerEncoding :: MulState CodePoint
