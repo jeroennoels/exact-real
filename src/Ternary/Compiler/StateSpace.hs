@@ -9,6 +9,7 @@ import Ternary.Core.Multiplication
 import Ternary.Util.Misc (cross)
 import Ternary.Util.TransitiveClosure (reachTransitively)
 
+import Control.Arrow (second)
 import Control.Monad (liftM2)
 import Data.Maybe (fromJust)
 import Data.Array.Unboxed
@@ -86,35 +87,38 @@ instance TriangleState CodePoint where
 integerEncoding :: MulState CodePoint
 integerEncoding = undefined
 
--- pointer arithmetic
-{-# INLINE combine #-}
-combine :: (T2, CodePoint) -> Int
-combine (c, CodePoint p) = 5 * fromIntegral p + fromEnum c
 
-combine' :: (T2, CodePoint) -> Int16
-combine' (c, CodePoint p) = fromIntegral p + 2048 * fromIntegral (fromEnum c)
+{-# INLINE mixIn #-}
+mixIn :: (T2, CodePoint) -> Int
+mixIn (c, CodePoint p) = 5 * fromIntegral p + fromEnum c
 
--- quotRem is slow!
-{-# INLINE factor #-}
-factor :: Int16 -> (T2, CodePoint)
-factor i | i < 2048 = (M2, CodePoint $ i)
-factor i | i < 4096 = (M1, CodePoint $ i - 2048)
-factor i | i < 6144 = (O0, CodePoint $ i - 4096)
-factor i | i < 8192 = (P1, CodePoint $ i - 6144)
-factor i            = (P2, CodePoint $ i - 8192)
-
-factor' :: Int -> (T2, CodePoint)
-factor' i = (toEnum r, CodePoint (fromIntegral q))
+splitIn :: Int -> (T2, CodePoint)
+splitIn i = (toEnum r, CodePoint (fromIntegral q))
   where (q,r) = quotRem i 5
 
+mixOut :: (T2, CodePoint) -> Int16
+mixOut (c, CodePoint p) = fromIntegral p + 2048 * fromIntegral (fromEnum c)
+
+{-# INLINE split #-}
+-- quotRem is slow!
+split :: Int16 -> (T2, Int16)
+split i | i < 2048 = (M2, i)
+split i | i < 4096 = (M1, i - 2048)
+split i | i < 6144 = (O0, i - 4096)
+split i | i < 8192 = (P1, i - 6144)
+split i            = (P2, i - 8192)
+
+{-# INLINE splitOut #-}
+splitOut :: Int16 -> (T2, CodePoint)
+splitOut = second CodePoint . split
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
 appliedUniversalTriangle ab i =
-  let (c,code) = factor' i
+  let (c,code) = splitIn i
       (_,state) = decode code
   in if isSecondState state && c `elem` [M2,P2]
      then -1  -- this is ugly
-     else combine' (universalTriangle (ab,c) code)
+     else mixOut (universalTriangle (ab,c) code)
 
 
 toAssoc :: (a -> b) -> [a] -> [(a,b)]
@@ -126,7 +130,7 @@ appliedUniversalTriangleAssoc ab = toAssoc (appliedUniversalTriangle ab) [0..n]
   where n = 5 * Set.size stateBundle - 1
 
 applyTriangle' :: (T2,T2) -> (T2,CodePoint) -> (T2,CodePoint)
-applyTriangle' ab pair = factor $ memo ab `unsafeAt` combine pair
+applyTriangle' ab pair = splitOut $ memo ab `unsafeAt` mixIn pair
 
 chain' :: ((a,s) -> (a,s)) -> Kernel a a [s]
 chain' f a (u:us) =
