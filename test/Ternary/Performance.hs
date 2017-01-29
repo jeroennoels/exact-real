@@ -36,4 +36,4 @@ b = Exact (randomT2s 1) 0
 performance =
   putStrLn "\nPerformance:"
   >> assertWarm
-  >> timeMultiplication 1000 a b
+  >> timeMultiplication 2000 a b

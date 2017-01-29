@@ -1,11 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Ternary.Util.TransitiveClosure (reachTransitively) where
+module Ternary.Util.SetUtils where
 
 import Data.Maybe (fromJust)
 import Data.Set (Set, unions, union, difference)
 import qualified Data.Set as Set
 
+
+assertSize :: Ord a => Set a -> Int -> Set a
+assertSize s n
+  | n == Set.size s = s
+  | otherwise = error $ "Expected size = " ++ show n
 
 collectSuccess :: Ord a => Set (Maybe a) -> Set a
 collectSuccess as = Set.map fromJust $ Set.delete Nothing as

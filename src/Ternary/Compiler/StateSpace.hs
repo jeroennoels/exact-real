@@ -7,7 +7,7 @@ import Ternary.Core.Digit
 import Ternary.Core.Kernel
 import Ternary.Core.Multiplication
 import Ternary.Util.Misc (cross)
-import Ternary.Util.TransitiveClosure (reachTransitively)
+import Ternary.Util.SetUtils (reachTransitively, assertSize)
 
 import Control.Arrow (second)
 import Control.Monad (liftM2)
@@ -16,7 +16,7 @@ import Data.Array.Unboxed
 import Data.Array.Base (unsafeAt)
 import Data.List (lookup)
 import GHC.Int (Int16)
-import Data.Set (Set, unions, singleton, toList)
+import Data.Set (Set, unions, singleton, toList, partition, findIndex)
 import qualified Data.Set as Set
 
 
@@ -57,31 +57,57 @@ tag a bs = Set.map section bs where section b = (a,b)
 
 -- For every triangle parametrization, we have a set of reachable
 -- states.  Here we make a disjoint union of all these sets.
-stateBundle :: Set (TriangleParam, TS)
+type Bundle = Set (TriangleParam, TS)
+
+stateBundle :: Bundle
 stateBundle = unions $ map tagStates allParams
   where tagStates param = tag param (reachableStates param)
 
-newtype CodePoint = CodePoint Int16
+bundlePair :: (Bundle, Bundle)
+bundlePair = partition pred stateBundle
+  where pred (_,s) = isSecondState s 
 
-unwrap :: Integral a => CodePoint -> a
-unwrap (CodePoint i) = fromIntegral i
+secondStateBundle, normalStateBundle :: Bundle
+secondStateBundle = assertSize (fst bundlePair) 409
+normalStateBundle = assertSize (snd bundlePair) 1540
+
+data CodePoint = Normal Int16 | Second Int16
+
+rangeCheck :: Ord a => a -> a -> a -> a
+rangeCheck lo hi x
+  | lo <= x && x <= hi = x
+  | otherwise = error "rangeCheck"
+
+wrapNormal, wrapSecond :: Integral i => i -> CodePoint
+wrapNormal = Normal . fromIntegral . rangeCheck 0 1539
+wrapSecond = Second . fromIntegral . rangeCheck 1540 1948
+  
+wrap :: Integral i => i -> CodePoint
+wrap i = if i < 1540 then wrapNormal i else wrapSecond i
+
+unwrap :: Integral i => CodePoint -> i
+unwrap (Normal i) = fromIntegral i
+unwrap (Second i) = fromIntegral i
 
 encode :: (TriangleParam, TS) -> CodePoint
-encode x = CodePoint $ fromIntegral (Set.findIndex x stateBundle)
+encode x@(_,s) = 
+  if isSecondState s 
+  then wrapSecond $ findIndex x secondStateBundle + 1540
+  else wrapNormal $ findIndex x normalStateBundle
 
 decode :: CodePoint -> (TriangleParam, TS)
-decode (CodePoint i) = Set.elemAt (fromIntegral i) stateBundle
+decode (Normal i) = Set.elemAt (fromIntegral i) normalStateBundle
+decode (Second i) = Set.elemAt (fromIntegral i - 1540) secondStateBundle
 
 universalTriangle :: Triangle CodePoint
 universalTriangle input code = (out, encode (param, nextState))
   where (param, state) = decode code
         (out, nextState) = makeTriangle param input state
 
-
 instance TriangleState CodePoint where
   initialState param = encode (param, initialState param)
   makeTriangle = const universalTriangle
-  isSecondState = isSecondState . snd . decode
+  isSecondState = undefined
 
 -- algorithm selector
 integerEncoding :: MulState CodePoint
@@ -90,14 +116,23 @@ integerEncoding = undefined
 
 {-# INLINE mixIn #-}
 mixIn :: (T2, CodePoint) -> Int
-mixIn (c, CodePoint p) = 5 * fromIntegral p + fromEnum c
+mixIn (M2, Normal i) = fromIntegral i
+mixIn (P2, Normal i) = fromIntegral i + 1540
+mixIn (M1, point) = unwrap point + 3080
+mixIn (O0, point) = unwrap point + 5029
+mixIn (P1, point) = unwrap point + 6978
+
 
 splitIn :: Int -> (T2, CodePoint)
-splitIn i = (toEnum r, CodePoint (fromIntegral q))
-  where (q,r) = quotRem i 5
-
+splitIn i
+  | i < 1540 = (M2, wrapNormal i)
+  | i < 3080 = (P2, wrapNormal (i-1540))
+  | i < 5029 = (M1, wrap (i-3080))
+  | i < 6978 = (O0, wrap (i-5029))
+  | i < 8927 = (P1, wrap (i-6978))
+ 
 mixOut :: (T2, CodePoint) -> Int16
-mixOut (c, CodePoint p) = fromIntegral p + 2048 * fromIntegral (fromEnum c)
+mixOut (c,p) = unwrap p + 2048 * fromIntegral (fromEnum c)
 
 {-# INLINE split #-}
 -- quotRem is slow!
@@ -110,15 +145,12 @@ split i            = (P2, i - 8192)
 
 {-# INLINE splitOut #-}
 splitOut :: Int16 -> (T2, CodePoint)
-splitOut = second CodePoint . split
+splitOut = second wrap . split
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
 appliedUniversalTriangle ab i =
   let (c,code) = splitIn i
-      (_,state) = decode code
-  in if isSecondState state && c `elem` [M2,P2]
-     then -1  -- this is ugly
-     else mixOut (universalTriangle (ab,c) code)
+  in mixOut $ universalTriangle (ab,c) code
 
 
 toAssoc :: (a -> b) -> [a] -> [(a,b)]
@@ -127,7 +159,7 @@ toAssoc f = map graph
 
 appliedUniversalTriangleAssoc :: (T2,T2) -> [(Int,Int16)]        
 appliedUniversalTriangleAssoc ab = toAssoc (appliedUniversalTriangle ab) [0..n]
-  where n = 5 * Set.size stateBundle - 1
+  where n = 2 * 1540 + 3 * 1949  - 1
 
 applyTriangle' :: (T2,T2) -> (T2,CodePoint) -> (T2,CodePoint)
 applyTriangle' ab pair = splitOut $ memo ab `unsafeAt` mixIn pair
@@ -168,4 +200,4 @@ arrays = toAssoc toArray (allT2 `cross` allT2)
 memo ab = fromJust $ lookup ab arrays
 
 warmup :: Bool
-warmup = sum (map ((!0) . snd) arrays) == -19043
+warmup = sum (map ((!0) . snd) arrays) == 18280
