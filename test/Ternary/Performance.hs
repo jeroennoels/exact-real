@@ -5,7 +5,7 @@ import System.TimeIt
 import Ternary.Core.Digit (T2(..))
 import Ternary.List.Exact
 import Ternary.List.ExactNum
-import Ternary.Compiler.StateSpace (warmup)
+import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.QuickCheckUtil
 
 randomT2s :: Int -> [T2]              
@@ -24,8 +24,8 @@ timeMultiplication n x y =
   >> force n y
   >> putStr "  Fine Structure    "
   >> time multiplyAltFS
-  >> putStr "  Integer Encoding  "  
-  >> time multiplyAltIE
+  >> putStr "  Array Lookup      "  
+  >> time multiplyAltAL
   where time (**) = timeIt $ force n (x ** y)
 
 

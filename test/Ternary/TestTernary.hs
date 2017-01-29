@@ -157,6 +157,8 @@ alternativeTests =
      property $ qcIntegerMultiplication multiplyAltFS),
     ("Integer multiplication 2",
      property $ qcIntegerMultiplication multiplyAltIE),
+    ("Integer multiplication 3",
+     property $ qcIntegerMultiplication multiplyAltAL),
     ("Scalar multiplication",
      property qcScalar),
     ("Multiplication self terms",
