@@ -80,7 +80,7 @@ data MulState s = MulState [TriangleParam] [s]
 multKernel :: TriangleState s => Kernel (T2,T2) T2 (MulState s)
 multKernel ab (MulState ps us) =
   let (out, vs) = step ab ps us
-      p = uncurry TriangleParam $ ab
+      p = uncurry TriangleParam ab
   in (out, MulState (p:ps) (initialState p:vs))
 
 

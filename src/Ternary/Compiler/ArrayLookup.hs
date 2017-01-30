@@ -77,7 +77,7 @@ newtype MulState2 = MulState2 [Int16]
 multKernel' :: Kernel (T2,T2) T2 MulState2
 multKernel' ab (MulState2 us) =
   let (out, vs) = step' ab us
-      p = uncurry TriangleParam $ ab
+      p = uncurry TriangleParam ab
       init = unwrap $ initialState p
   in (out, MulState2 (init:vs))
 

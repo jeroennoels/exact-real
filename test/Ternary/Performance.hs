@@ -8,6 +8,7 @@ import Ternary.List.ExactNum
 import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.QuickCheckUtil
 
+
 randomT2s :: Int -> [T2]              
 randomT2s seed = map toEnum (randomsR seed (0,4))
 
@@ -20,8 +21,8 @@ force n x = streamDigits x !! n `seq` return ()
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y = 
-  force n x
-  >> force n y
+  force (n+2) x
+  >> force (n+2) y
   >> putStr "  Fine Structure    "
   >> time multiplyAltFS
   >> putStr "  Array Lookup      "  
@@ -37,3 +38,4 @@ performance =
   putStrLn "\nPerformance:"
   >> assertWarm
   >> timeMultiplication 2000 a b
+
