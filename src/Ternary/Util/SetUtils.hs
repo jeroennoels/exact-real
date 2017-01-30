@@ -6,6 +6,8 @@ import Data.Maybe (fromJust)
 import Data.Set (Set, unions, union, difference)
 import qualified Data.Set as Set
 
+tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b)
+tag a bs = Set.map section bs where section b = (a,b)
 
 assertSize :: Ord a => Set a -> Int -> Set a
 assertSize s n

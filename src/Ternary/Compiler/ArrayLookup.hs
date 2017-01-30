@@ -1,26 +1,24 @@
 module Ternary.Compiler.ArrayLookup (arrayLookup, warmup) where
 
-import Control.Arrow (second)
 import Data.Maybe (fromJust)
 import Data.Array.Unboxed
 import Data.Array.Base (unsafeAt)
 import Data.List (lookup)
 import GHC.Int (Int16)
 
-import Ternary.Util.Misc (cross)
+import Ternary.Util.Misc (cross, toAssoc)
 import Ternary.Core.Digit
-import Ternary.Core.Kernel
+import Ternary.Core.Kernel (Kernel)
 import Ternary.Core.Multiplication
 import Ternary.Compiler.StateSpace
 
 {-# INLINE mixIn #-}
-mixIn :: (T2, CodePoint) -> Int
-mixIn (M2, Normal i) = fromIntegral i
-mixIn (P2, Normal i) = fromIntegral i + 1540
-mixIn (M1, point) = unwrap point + 3080
-mixIn (O0, point) = unwrap point + 5029
-mixIn (P1, point) = unwrap point + 6978
-
+mixIn :: (T2, Int16) -> Int16
+mixIn (M2, i) = i
+mixIn (P2, i) = i + 1540
+mixIn (M1, i) = i + 3080
+mixIn (O0, i) = i + 5029
+mixIn (P1, i) = i + 6978
 
 splitIn :: Int -> (T2, CodePoint)
 splitIn i
@@ -33,71 +31,61 @@ splitIn i
 mixOut :: (T2, CodePoint) -> Int16
 mixOut (c,p) = unwrap p + 2048 * fromIntegral (fromEnum c)
 
-{-# INLINE split #-}
--- quotRem is slow!
-split :: Int16 -> (T2, Int16)
-split i | i < 2048 = (M2, i)
-split i | i < 4096 = (M1, i - 2048)
-split i | i < 6144 = (O0, i - 4096)
-split i | i < 8192 = (P1, i - 6144)
-split i            = (P2, i - 8192)
-
+-- quotRem is slow
 {-# INLINE splitOut #-}
-splitOut :: Int16 -> (T2, CodePoint)
-splitOut = second wrap . split
-
+splitOut :: Int16 -> (T2, Int16)
+splitOut i | i < 2048 = (M2, i)
+splitOut i | i < 4096 = (M1, i - 2048)
+splitOut i | i < 6144 = (O0, i - 4096)
+splitOut i | i < 8192 = (P1, i - 6144)
+splitOut i            = (P2, i - 8192)
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
 appliedUniversalTriangle ab i =
   let (c,code) = splitIn i
   in mixOut $ universalTriangle (ab,c) code
 
+toArray :: (T2,T2) -> UArray Int Int16
+toArray ab = array (0,n) $ toAssoc f [0..n]
+  where f :: Int -> Int16
+        f = appliedUniversalTriangle ab
+        n = 8926
 
-toAssoc :: (a -> b) -> [a] -> [(a,b)]
-toAssoc f = map graph
-  where graph a = (a, f a)
+arrays = toAssoc toArray (allT2 `cross` allT2)
 
-appliedUniversalTriangleAssoc :: (T2,T2) -> [(Int,Int16)]        
-appliedUniversalTriangleAssoc ab = toAssoc (appliedUniversalTriangle ab) [0..n]
-  where n = 2 * 1540 + 3 * 1949  - 1
+memo ::(T2,T2) -> UArray Int Int16
+memo ab = fromJust $ lookup ab arrays
 
-applyTriangle' :: (T2,T2) -> (T2,CodePoint) -> (T2,CodePoint)
-applyTriangle' ab pair = splitOut $ memo ab `unsafeAt` mixIn pair
+warmup :: Bool
+warmup = sum (map ((!0) . snd) arrays) == 18280
 
-chain' :: ((a,s) -> (a,s)) -> Kernel a a [s]
-chain' f a (u:us) =
+applyTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
+applyTriangle arr pair = splitOut $ arr `unsafeAt` fromIntegral (mixIn pair)
+
+chain :: ((a,s) -> (a,s)) -> Kernel a a [s]
+chain f a (u:us) =
   let (b,v) = f (a,u)
-      (c,vs) = b `seq` chain' f b us
+      (c,vs) = b `seq` chain f b us
   in (c,v:vs)
-chain' _ a [] = (a,[])
+chain _ a [] = (a,[])
 
-step' :: (T2,T2) -> [CodePoint] -> (T2, [CodePoint])
-step' ab = chain' (applyTriangle' ab) O0 -- unsafeIgnoreInput no longer works 
+step' :: (T2,T2) -> [Int16] -> (T2, [Int16])
+step' ab = chain (applyTriangle (memo ab)) O0 -- undefined input no longer works 
 
-newtype MulState2 = MulState2 [CodePoint]
+newtype MulState2 = MulState2 [Int16]
 
 multKernel' :: Kernel (T2,T2) T2 MulState2
 multKernel' ab (MulState2 us) =
   let (out, vs) = step' ab us
       p = uncurry TriangleParam $ ab
-  in (out, MulState2 (initialState p:vs))
+      init = unwrap $ initialState p
+  in (out, MulState2 (init:vs))
 
 
 instance MultiplicationState MulState2 where
   kernel = multKernel'
-  initialMultiplicationState p = MulState2 [initialState p]
+  initialMultiplicationState p = MulState2 [unwrap (initialState p)]
 
 -- algorithm selector
 arrayLookup :: MulState2
 arrayLookup = undefined
-
-toArray :: (T2,T2) -> UArray Int Int16
-toArray ab = array (0, length list - 1) list
-  where list = appliedUniversalTriangleAssoc ab
-
-arrays = toAssoc toArray (allT2 `cross` allT2)
-
-memo ab = fromJust $ lookup ab arrays
-
-warmup :: Bool
-warmup = sum (map ((!0) . snd) arrays) == 18280

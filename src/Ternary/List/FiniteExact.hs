@@ -36,7 +36,6 @@ unsafeApplyFinite f (Finite (Exact x p)) = Finite (Exact (f x) p)
 
 -- Only use the following when you know the given function transforms
 -- finite to finite:
-
 unsafeLift :: (Exact -> Exact) -> FiniteExact -> FiniteExact
 unsafeLift f (Finite t) = Finite (f t) 
 
@@ -45,11 +44,11 @@ truncateLift n f x = takeFinite cut inf
   where inf = f (infiniteExact x)
         cut = n + finiteLength x
 
--- Here the caller takes responsibility for ensuring finite data:
-
+-- The caller takes responsibility for ensuring finite data.
 unsafeFinite :: Exact -> FiniteExact
 unsafeFinite = Finite
 
+-- We do not want to export the constructor of FiniteExact.
 unwrapFinite :: FiniteExact -> Exact
 unwrapFinite (Finite x) = x
 

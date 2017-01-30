@@ -3,17 +3,15 @@ module Ternary.Compiler.StateSpace (
   universalTriangle, integerEncoding,
   unwrap, wrap, wrapNormal) where
 
-import GHC.Int (Int16)
 import Control.Monad (liftM2)
-import Data.Set (Set, unions, singleton, toList, partition, findIndex)
+import Data.Set (Set, unions, singleton, partition, findIndex)
 import qualified Data.Set as Set
 
 import Ternary.Core.Digit
 import Ternary.Core.Kernel
 import Ternary.Core.Multiplication
 import Ternary.Util.Misc (cross)
-import Ternary.Util.SetUtils (reachTransitively, assertSize)
-
+import Ternary.Util.SetUtils (reachTransitively, assertSize, tag)
 
 
 allInputs :: [((T2, T2), T2)]
@@ -48,9 +46,6 @@ allReachableStates = unions $ map reachableStates allParams
 allSecondStates :: Set TS
 allSecondStates = Set.filter isSecondState allReachableStates
 
-tag :: (Ord a, Ord b) => a -> Set b -> Set (a,b)
-tag a bs = Set.map section bs where section b = (a,b)
-
 -- For every triangle parametrization, we have a set of reachable
 -- states.  Here we make a disjoint union of all these sets.
 type Bundle = Set (TriangleParam, TS)
@@ -67,18 +62,18 @@ secondStateBundle, normalStateBundle :: Bundle
 secondStateBundle = assertSize (fst bundlePair) 409
 normalStateBundle = assertSize (snd bundlePair) 1540
 
-data CodePoint = Normal Int16 | Second Int16
+data CodePoint = Normal Int | Second Int
 
 rangeCheck :: Ord a => a -> a -> a -> a
 rangeCheck lo hi x
   | lo <= x && x <= hi = x
   | otherwise = error "rangeCheck"
 
-wrapNormal, wrapSecond :: Integral i => i -> CodePoint
-wrapNormal = Normal . fromIntegral . rangeCheck 0 1539
-wrapSecond = Second . fromIntegral . rangeCheck 1540 1948
+wrapNormal, wrapSecond :: Int -> CodePoint
+wrapNormal = Normal . rangeCheck 0 1539
+wrapSecond = Second . rangeCheck 1540 1948
   
-wrap :: Integral i => i -> CodePoint
+wrap :: Int -> CodePoint
 wrap i = if i < 1540 then wrapNormal i else wrapSecond i
 
 unwrap :: Integral i => CodePoint -> i
@@ -92,8 +87,8 @@ encode x@(_,s) =
   else wrapNormal $ findIndex x normalStateBundle
 
 decode :: CodePoint -> (TriangleParam, TS)
-decode (Normal i) = Set.elemAt (fromIntegral i) normalStateBundle
-decode (Second i) = Set.elemAt (fromIntegral i - 1540) secondStateBundle
+decode (Normal i) = Set.elemAt i normalStateBundle
+decode (Second i) = Set.elemAt (i-1540) secondStateBundle
 
 universalTriangle :: Triangle CodePoint
 universalTriangle input code = (out, encode (param, nextState))

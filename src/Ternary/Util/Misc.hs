@@ -4,6 +4,10 @@ import Control.Monad (liftM2)
 
 type Binop a = a -> a -> a
 
+toAssoc :: (a -> b) -> [a] -> [(a,b)]
+toAssoc f = map graph
+  where graph a = (a, f a)
+
 cross :: [a] -> [b] -> [(a,b)]
 cross = liftM2 (,)
 
