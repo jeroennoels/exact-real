@@ -1,9 +1,8 @@
 module Ternary.Compiler.ArrayLookup (arrayLookup, warmup) where
 
-import Data.Maybe (fromJust)
-import Data.Array.Unboxed
+import Control.Arrow ((&&&))
 import Data.Array.Base (unsafeAt)
-import Data.List (lookup)
+import Data.Array.Unboxed
 import GHC.Int (Int16)
 
 import Ternary.Util.Misc (cross, toAssoc)
@@ -40,24 +39,34 @@ splitOut i | i < 6144 = (O0, i - 4096)
 splitOut i | i < 8192 = (P1, i - 6144)
 splitOut i            = (P2, i - 8192)
 
+
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
 appliedUniversalTriangle ab i =
   let (c,code) = splitIn i
   in mixOut $ universalTriangle (ab,c) code
 
+-- Make an array for every applied universal triangle
 toArray :: (T2,T2) -> UArray Int Int16
 toArray ab = array (0,n) $ toAssoc f [0..n]
   where f :: Int -> Int16
         f = appliedUniversalTriangle ab
         n = 8926
 
-arrays = toAssoc toArray (allT2 `cross` allT2)
+hash :: (T2,T2) -> Int
+hash (a,b) = 5 * fromEnum a + fromEnum b
 
-memo ::(T2,T2) -> UArray Int Int16
-memo ab = fromJust $ lookup ab arrays
+triangleArrays :: [(Int, UArray Int Int16)]
+triangleArrays = map (hash &&& toArray) (allT2 `cross` allT2)
+
+-- top level memoization
+memo :: Array Int (UArray Int Int16)
+memo = array (0,24) triangleArrays
+
+lookupArray ::(T2,T2) -> UArray Int Int16
+lookupArray ab = memo `unsafeAt` hash ab
 
 warmup :: Bool
-warmup = sum (map ((!0) . snd) arrays) == 18280
+warmup = sum (map (!0) (elems memo)) == 18280
 
 applyTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
 applyTriangle arr pair = splitOut $ arr `unsafeAt` fromIntegral (mixIn pair)
@@ -70,7 +79,7 @@ chain f a (u:us) =
 chain _ a [] = (a,[])
 
 step' :: (T2,T2) -> [Int16] -> (T2, [Int16])
-step' ab = chain (applyTriangle (memo ab)) O0 -- undefined input no longer works 
+step' ab = chain (applyTriangle (lookupArray ab)) O0 -- instead of undefined
 
 newtype MulState2 = MulState2 [Int16]
 

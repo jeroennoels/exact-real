@@ -5,6 +5,6 @@ import Ternary.Performance
 import Ternary.Exhaust
 import Ternary.QuickCheckUtil
 
-main = quickSuite suite >>
-       exhaustMultiplication 4 >>
-       performance
+main = --quickSuite suite >>
+       performance >>
+       exhaustMultiplication 4
