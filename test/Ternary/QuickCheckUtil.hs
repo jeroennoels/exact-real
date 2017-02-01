@@ -10,7 +10,7 @@ import Test.QuickCheck.Checkers
 
 assert :: String -> Bool -> IO ()
 assert description test = timeIt $ putStr text
-  where text = description ++ " " ++ result ++ ",  "
+  where text = description ++ " " ++ result ++ "  "
         result = if test then "+++ OK" else "FAILED"
 
 

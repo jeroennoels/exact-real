@@ -6,26 +6,25 @@ import Ternary.Core.Digit (T2(..))
 import Ternary.List.Exact
 import Ternary.List.ExactNum
 import Ternary.Compiler.ArrayLookup (warmup)
-import Ternary.QuickCheckUtil
+import Ternary.QuickCheckUtil (randomsR, assert)
 
 
-randomT2s :: Int -> [T2]              
+randomT2s :: Int -> [T2]
 randomT2s seed = map toEnum (randomsR seed (0,4))
 
 assertWarm :: IO ()
-assertWarm = timeIt $ putStr (text ++ "      ")
-  where text = "  Warmup: " ++ if warmup then "done" else "error"
+assertWarm = assert "  Warmup: " warmup
 
 force :: Int -> Exact -> IO ()
 force n x = streamDigits x !! n `seq` return ()
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
-timeMultiplication n x y = 
+timeMultiplication n x y =
   force (n+2) x
   >> force (n+2) y
-  >> putStr "  Fine Structure    "
+  >> putStr "  Fine Structure   "
   >> time multiplyAltFS
-  >> putStr "  Array Lookup      "  
+  >> putStr "  Array Lookup     "
   >> time multiplyAltAL
   where time (**) = timeIt $ force n (x ** y)
 
