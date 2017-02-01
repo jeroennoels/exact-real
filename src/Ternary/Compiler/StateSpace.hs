@@ -1,5 +1,5 @@
 module Ternary.Compiler.StateSpace (
-  CodePoint(..),
+  CodePoint(..), initialCodePoint,
   universalTriangle, integerEncoding,
   unwrap, wrap, wrapNormal) where
 
@@ -13,10 +13,6 @@ import Ternary.Core.Multiplication
 import Ternary.Util.Misc (cross)
 import Ternary.Util.SetUtils (reachTransitively, assertSize, tag)
 
-
-allInputs :: [((T2, T2), T2)]
-allInputs = allT2 `cross` allT2 `cross` allT2
-
 -- Remember: on the second step, the recursive channel of a triangle
 -- only accepts input between -1 and 1.
 validInputForState :: TriangleState s => ((T2, T2), T2) -> s -> Bool
@@ -26,12 +22,13 @@ validInputForState (_,r) s
 
 -- For some inputs, the corresponding transition function is partial.
 allTransitions :: TriangleState s => Triangle s -> [s -> Maybe s]
-allTransitions triangle = map f allInputs
-   where f i s =
-           if validInputForState i s
-           then Just $ snd (triangle i s)
-           else Nothing
-
+allTransitions triangle = map nextState allInputs
+  where allInputs = allT2T2 `cross` allT2
+        nextState i s =
+          if validInputForState i s
+          then Just $ snd (triangle i s)
+          else Nothing
+         
 reachableStates :: (Ord s, TriangleState s) => TriangleParam -> Set s
 reachableStates param = reachTransitively fs (singleton $ initialState param)
   where fs = allTransitions (makeTriangle param)
@@ -103,3 +100,6 @@ instance TriangleState CodePoint where
 -- algorithm selector
 integerEncoding :: MulState CodePoint
 integerEncoding = undefined
+
+initialCodePoint :: TriangleParam -> CodePoint
+initialCodePoint = initialState

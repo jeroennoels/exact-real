@@ -8,8 +8,10 @@ import GHC.Int (Int16)
 import Ternary.Util.Misc (cross, toAssoc)
 import Ternary.Core.Digit
 import Ternary.Core.Kernel (Kernel)
-import Ternary.Core.Multiplication
 import Ternary.Compiler.StateSpace
+import Ternary.Core.Multiplication (
+  TriangleParam (TriangleParam),
+  MultiplicationState (kernel, initialMultiplicationState))
 
 {-# INLINE mixIn #-}
 mixIn :: (T2, Int16) -> Int16
@@ -52,21 +54,30 @@ toArray ab = array (0,n) $ toAssoc f [0..n]
         f = appliedUniversalTriangle ab
         n = 8926
 
+-- we use this to hash both triangle inputs and params
 hash :: (T2,T2) -> Int
 hash (a,b) = 5 * fromEnum a + fromEnum b
 
-triangleArrays :: [(Int, UArray Int Int16)]
-triangleArrays = map (hash &&& toArray) (allT2 `cross` allT2)
+-- top level memoization
+memoTriangles :: Array Int (UArray Int Int16)
+memoTriangles = array (0,24) assoc
+  where assoc = map (hash &&& toArray) allT2T2
 
 -- top level memoization
-memo :: Array Int (UArray Int Int16)
-memo = array (0,24) triangleArrays
+memoInitial :: UArray Int Int16
+memoInitial = array (0,24) assoc
+  where assoc = map (hash &&& init) allT2T2
+        init = unwrap . initialCodePoint . uncurry TriangleParam
 
-lookupArray ::(T2,T2) -> UArray Int Int16
-lookupArray ab = memo `unsafeAt` hash ab
+lookupArray :: (T2,T2) -> UArray Int Int16
+lookupArray = unsafeAt memoTriangles . hash
+
+lookupInitial :: (T2,T2) -> Int16
+lookupInitial = unsafeAt memoInitial . hash
 
 warmup :: Bool
-warmup = sum (map (!0) (elems memo)) == 18280
+warmup = sum samples < 0
+  where samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
 applyTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
 applyTriangle arr pair = splitOut $ arr `unsafeAt` fromIntegral (mixIn pair)
@@ -86,14 +97,13 @@ newtype MulState2 = MulState2 [Int16]
 multKernel' :: Kernel (T2,T2) T2 MulState2
 multKernel' ab (MulState2 us) =
   let (out, vs) = step' ab us
-      p = uncurry TriangleParam ab
-      init = unwrap $ initialState p
-  in (out, MulState2 (init:vs))
+  in (out, MulState2 (lookupInitial ab:vs))
 
 
 instance MultiplicationState MulState2 where
   kernel = multKernel'
-  initialMultiplicationState p = MulState2 [unwrap (initialState p)]
+  initialMultiplicationState (TriangleParam a b) =
+    MulState2 [lookupInitial (a,b)]
 
 -- algorithm selector
 arrayLookup :: MulState2

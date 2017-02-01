@@ -1,8 +1,10 @@
 module Ternary.Core.Digit (
   T1(..), T2(..), T4(..),
-  allT2, toT2, fromT1, fromT2, fromT4,
+  allT2, allT2T2, toT2, fromT1, fromT2, fromT4,
   negateT2, addT1, addT2, multiplyT2,
   coerceT1, embedT1, carry) where
+
+import Ternary.Util.Misc (cross)
 
 -- We want all digit operations to be type safe.  The following type
 -- corresponds to the redundant ternary digit range [-2..2].  Here the
@@ -13,6 +15,8 @@ module Ternary.Core.Digit (
 data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq, Ord, Enum)
 
 allT2 = [M2, M1, O0, P1, P2]
+
+allT2T2 = allT2 `cross` allT2
 
 -- We want to add and multiply ternary digits from the above range.
 -- Therefore we need a bigger range [-4..4] to hold intermediate
