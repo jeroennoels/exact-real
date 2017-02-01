@@ -1,5 +1,5 @@
 module Ternary.Compiler.StateSpace (
-  CodePoint(..), initialCodePoint,
+  CodePoint, initialCodePoint,
   universalTriangle, integerEncoding,
   unwrap, wrap, wrapNormal) where
 
@@ -86,6 +86,11 @@ encode x@(_,s) =
 decode :: CodePoint -> (TriangleParam, TS)
 decode (Normal i) = Set.elemAt i normalStateBundle
 decode (Second i) = Set.elemAt (i-1540) secondStateBundle
+
+-- The following triangle is "universal" in the sense that it includes
+-- a triangle for every parametrization, because a TriangleParam is
+-- embedded in each CodePoint.  Therefor the initial state determines
+-- the parametrization.
 
 universalTriangle :: Triangle CodePoint
 universalTriangle input code = (out, encode (param, nextState))

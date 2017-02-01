@@ -11,6 +11,7 @@ import Ternary.QuickCheckUtil
 import Ternary.Util.Misc
 import Ternary.Util.Triad
 import Ternary.Fiddle
+import Ternary.TestKernel (qcChain)
 
 import Control.Monad (liftM, liftM2)
 import Control.Arrow (first)
@@ -162,11 +163,14 @@ alternativeTests =
     ("Scalar multiplication",
      property qcScalar),
     ("Multiplication self terms",
-     property qcSelf)])
-  
+     property qcSelf),
+    ("Kernel chain",
+     property qcChain)])
 
 suite = testTriad ++
         [testTernary,
          testAddition,
          testMultiplication,
          alternativeTests]
+
+fast = quickCheck $ property $ qcIntegerMultiplication multiplyAltAL

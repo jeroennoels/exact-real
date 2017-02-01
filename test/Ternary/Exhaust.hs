@@ -1,12 +1,13 @@
 module Ternary.Exhaust (exhaustMultiplication) where
 
-import System.TimeIt
 import Control.Monad (liftM2)
 
+import Ternary.QuickCheckUtil (assert)
 import Ternary.Util.Misc (Binop)
 import Ternary.Core.Digit
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
+
 
 nDigits :: Int -> [[T2]]
 nDigits n = sequence $ replicate n allT2
@@ -28,8 +29,6 @@ checkAllCombinations depth =
   in null (filter not results)
 
 exhaustMultiplication :: Int -> IO ()
-exhaustMultiplication depth = timeIt $ putStr ("\n" ++ text ++ ", ")
-  where
-    text = "Exhaust multiplication to depth " ++ show depth ++ " => " ++ result
-    test = checkAllCombinations depth
-    result = if test then "OK" else "FAILED!"
+exhaustMultiplication depth = assert desc (checkAllCombinations depth)
+  where desc = "Exhaust multiplication to depth " ++ show depth 
+

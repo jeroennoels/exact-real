@@ -1,4 +1,6 @@
-module Ternary.Compiler.ArrayLookup (arrayLookup, warmup) where
+module Ternary.Compiler.ArrayLookup (
+  splitIn, splitOut, mixIn, mixOut,
+  arrayLookup, warmup) where
 
 import Control.Arrow ((&&&))
 import Data.Array.Base (unsafeAt)
@@ -12,6 +14,10 @@ import Ternary.Compiler.StateSpace
 import Ternary.Core.Multiplication (
   TriangleParam (TriangleParam),
   MultiplicationState (kernel, initialMultiplicationState))
+
+-- The functions splitIn and mixOut are only used by the compiler,
+-- whereas mixIn and splitOut belong to the run-time.  Therefor only
+-- the latter must really be optimized for efficiency.
 
 {-# INLINE mixIn #-}
 mixIn :: (T2, Int16) -> Int16
@@ -28,9 +34,10 @@ splitIn i
   | i < 5029 = (M1, wrap (i-3080))
   | i < 6978 = (O0, wrap (i-5029))
   | i < 8927 = (P1, wrap (i-6978))
- 
+
+-- CodePoint wraps integers in the range [0..1948]              
 mixOut :: (T2, CodePoint) -> Int16
-mixOut (c,p) = unwrap p + 2048 * fromIntegral (fromEnum c)
+mixOut (a,code) = unwrap code + 2048 * fromIntegral (fromEnum a)
 
 -- quotRem is slow
 {-# INLINE splitOut #-}
@@ -47,7 +54,7 @@ appliedUniversalTriangle ab i =
   let (c,code) = splitIn i
   in mixOut $ universalTriangle (ab,c) code
 
--- Make an array for every applied universal triangle
+-- make an array for every applied universal triangle
 toArray :: (T2,T2) -> UArray Int Int16
 toArray ab = array (0,n) $ toAssoc f [0..n]
   where f :: Int -> Int16
@@ -58,14 +65,18 @@ toArray ab = array (0,n) $ toAssoc f [0..n]
 hash :: (T2,T2) -> Int
 hash (a,b) = 5 * fromEnum a + fromEnum b
 
+-- consistency check on the hash function
+hashRange = if map hash allT2T2 == [0..24]
+            then (0,24) else error "hashRange"
+
 -- top level memoization
 memoTriangles :: Array Int (UArray Int Int16)
-memoTriangles = array (0,24) assoc
+memoTriangles = array hashRange assoc
   where assoc = map (hash &&& toArray) allT2T2
 
 -- top level memoization
 memoInitial :: UArray Int Int16
-memoInitial = array (0,24) assoc
+memoInitial = array hashRange assoc
   where assoc = map (hash &&& init) allT2T2
         init = unwrap . initialCodePoint . uncurry TriangleParam
 
@@ -76,11 +87,16 @@ lookupInitial :: (T2,T2) -> Int16
 lookupInitial = unsafeAt memoInitial . hash
 
 warmup :: Bool
-warmup = sum samples < 0
-  where samples = elems memoInitial ++ map (!0) (elems memoTriangles)
+warmup = sum samples < 0  -- just happens when calculated in Int16
+  where samples :: [Int16]
+        samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
-applyTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
-applyTriangle arr pair = splitOut $ arr `unsafeAt` fromIntegral (mixIn pair)
+
+appliedTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
+appliedTriangle array = splitOut . unsafeAt array . fromIntegral . mixIn
+
+-- Because triangle parametrization has been absorbed in the state, we
+-- can now simplify Ternary.Core.Kernel.chain as follows:
 
 chain :: ((a,s) -> (a,s)) -> Kernel a a [s]
 chain f a (u:us) =
@@ -89,19 +105,19 @@ chain f a (u:us) =
   in (c,v:vs)
 chain _ a [] = (a,[])
 
-step' :: (T2,T2) -> [Int16] -> (T2, [Int16])
-step' ab = chain (applyTriangle (lookupArray ab)) O0 -- instead of undefined
+step :: (T2,T2) -> [Int16] -> (T2, [Int16])
+step ab = chain (appliedTriangle (lookupArray ab)) O0 -- instead of undefined
 
 newtype MulState2 = MulState2 [Int16]
 
-multKernel' :: Kernel (T2,T2) T2 MulState2
-multKernel' ab (MulState2 us) =
-  let (out, vs) = step' ab us
+multKernel :: Kernel (T2,T2) T2 MulState2
+multKernel ab (MulState2 us) =
+  let (out, vs) = step ab us
   in (out, MulState2 (lookupInitial ab:vs))
 
 
 instance MultiplicationState MulState2 where
-  kernel = multKernel'
+  kernel = multKernel
   initialMultiplicationState (TriangleParam a b) =
     MulState2 [lookupInitial (a,b)]
 

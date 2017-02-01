@@ -2,10 +2,17 @@
 
 module Ternary.QuickCheckUtil where
 
+import System.TimeIt
 import System.Random (Random, StdGen, randomR, mkStdGen)
 import Data.Monoid (Sum(Sum), Product(Product))
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
+
+assert :: String -> Bool -> IO ()
+assert description test = timeIt $ putStr text
+  where text = "  " ++ description ++ " => " ++ result ++ ", "
+        result = if test then "OK" else "FAILED"
+
 
 randomsR :: Random a => Int -> (a,a) -> [a]
 randomsR seed range = go (mkStdGen seed)
