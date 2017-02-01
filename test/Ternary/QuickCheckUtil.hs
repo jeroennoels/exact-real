@@ -10,8 +10,8 @@ import Test.QuickCheck.Checkers
 
 assert :: String -> Bool -> IO ()
 assert description test = timeIt $ putStr text
-  where text = "  " ++ description ++ " => " ++ result ++ ", "
-        result = if test then "OK" else "FAILED"
+  where text = description ++ " " ++ result ++ ",  "
+        result = if test then "+++ OK" else "FAILED"
 
 
 randomsR :: Random a => Int -> (a,a) -> [a]

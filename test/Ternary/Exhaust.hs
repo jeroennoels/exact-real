@@ -30,5 +30,5 @@ checkAllCombinations depth =
 
 exhaustMultiplication :: Int -> IO ()
 exhaustMultiplication depth = assert desc (checkAllCombinations depth)
-  where desc = "Exhaust multiplication to depth " ++ show depth 
+  where desc = "\nExhaust multiplication to depth " ++ show depth
 

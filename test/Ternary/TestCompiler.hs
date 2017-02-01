@@ -10,10 +10,10 @@ import Ternary.Compiler.StateSpace
 
 import Ternary.QuickCheckUtil (assert)
 
-testCompiler = a1 >> a2  where
-  a1 = assert "Compiler: splitIn versus MixIn" $
+testCompiler = putStrLn "\nTest Compiler:" >> a1 >> a2  where
+  a1 = assert "  splitIn versus MixIn:  " $
        isIndentity splitAndMixIn [0..8926]
-  a2 = assert "Compiler: splitOut versus mixOut" $
+  a2 = assert "  splitOut versus mixOut:" $
        isIndentity mixAndSplitOut $ allT2 `cross` [0..1948]
 
 splitAndMixIn :: Int16 -> Int16

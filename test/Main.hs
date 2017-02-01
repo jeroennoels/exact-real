@@ -8,7 +8,7 @@ import Ternary.Exhaust (exhaustMultiplication)
 import Ternary.TestCompiler (testCompiler)
 import Ternary.QuickCheckUtil (quickSuite)
 
-main = getArgs >>= run
+main = getArgs >>= run >> putStrLn ""
 
 run ["p"] = performance
 run ["f"] = fast
@@ -16,6 +16,5 @@ run _ = full
 
 full = quickSuite suite >>
        performance >>
-       putStrLn "\nMiscellaneous:" >>
        exhaustMultiplication 3 >>
        testCompiler
