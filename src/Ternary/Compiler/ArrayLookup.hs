@@ -102,7 +102,7 @@ chain :: ((a,s) -> (a,s)) -> Kernel a a [s]
 chain f a (u:us) =
   let (b,v) = f (a,u)
       (c,vs) = b `seq` chain f b us
-  in (c,v:vs)
+  in v `seq` (c,v:vs)
 chain _ a [] = (a,[])
 
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
