@@ -3,6 +3,7 @@ module Ternary.Performance (performance) where
 import System.TimeIt
 
 import Ternary.Core.Digit (T2(..))
+import Ternary.Util.Misc (forceElements)
 import Ternary.List.Exact
 import Ternary.List.ExactNum ()
 import Ternary.Compiler.ArrayLookup (warmup)
@@ -15,7 +16,7 @@ randomExact :: Int -> Exact
 randomExact seed = Exact (randomT2s seed) 0
 
 assertWarm :: IO ()
-assertWarm = assert "  Warmup: " warmup
+assertWarm = putStr "  Warmup: " >> timeIt warmup
 
 -- The time needed to construct random test samples must be excluded
 -- from measurements.  On the flip side, the time to construct the
@@ -23,9 +24,6 @@ assertWarm = assert "  Warmup: " warmup
 -- ensures the first n digits of an exact number are fully evaluated:
 force :: Int -> Exact -> IO ()
 force n = (return $!) . forceElements . take n . streamDigits
-
-forceElements :: [a] -> ()
-forceElements = foldr seq ()
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y =

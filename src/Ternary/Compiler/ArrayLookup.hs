@@ -7,7 +7,7 @@ import Data.Array.Base (unsafeAt)
 import Data.Array.Unboxed
 import GHC.Int (Int16)
 
-import Ternary.Util.Misc (cross, toAssoc)
+import Ternary.Util.Misc (cross, toAssoc, forceElements)
 import Ternary.Core.Digit
 import Ternary.Core.Kernel (Kernel)
 import Ternary.Compiler.StateSpace
@@ -86,9 +86,9 @@ lookupArray = unsafeAt memoTriangles . hash
 lookupInitial :: (T2,T2) -> Int16
 lookupInitial = unsafeAt memoInitial . hash
 
-warmup :: Bool
-warmup = sum samples < 0  -- just happens when calculated in Int16
-  where samples :: [Int16]
+warmup :: IO ()
+warmup = return $! forceElements samples
+  where samples :: [Int16] 
         samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
 

@@ -4,6 +4,10 @@ import Control.Monad (liftM2)
 
 type Binop a = a -> a -> a
 
+-- Force all the elements of a list, shallow, not deep.
+forceElements :: [a] -> ()
+forceElements = foldr seq ()
+
 toAssoc :: (a -> b) -> [a] -> [(a,b)]
 toAssoc f = map graph
   where graph a = (a, f a)
