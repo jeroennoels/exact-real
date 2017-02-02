@@ -1,13 +1,12 @@
 module Ternary.Fiddle (fiddleMore) where
 
-import Ternary.Core.Digit
-import Ternary.List.FiniteExact
-import Ternary.List.FiniteExactNum
+import Ternary.Core.Digit (T2(..))
+import Ternary.List.FiniteExact (FiniteExact, unsafeApplyFinite, shift)
+import Ternary.List.FiniteExactNum ()
 
 -- Fiddle two subsequent digits in a way that preserves semantics.
--- We only fiddle positive cases.
--- Negative cases are handled later by employing symmetry.
-
+-- We only fiddle pairs where the first digit is non-negative.
+-- Negative cases are handled later, by employing symmetry.
 fiddlePair :: (T2,T2) -> (T2,T2)
 fiddlePair (P2,M1) = (P1,P2)
 fiddlePair (P2,M2) = (P1,P1)
@@ -26,7 +25,7 @@ fiddleEven (q:qs) (a:b:cs) = if q then u:v:ws else a:b:ws
         ws = fiddleEven qs cs
 fiddleEven _ x = x
 
--- The basic fiddle that may act on positive pairs in even positions:
+-- The basic fiddle that may act on positive cases in even positions:
 fiddle :: [Bool] -> FiniteExact -> FiniteExact
 fiddle qs = unsafeApplyFinite (fiddleEven qs)
 
@@ -35,4 +34,3 @@ fiddle qs = unsafeApplyFinite (fiddleEven qs)
 -- Employ the symmetry of negation.
 fiddleMore :: [Bool] -> [Bool] -> [Bool] -> FiniteExact -> FiniteExact
 fiddleMore p q r = negate . fiddle p . negate . fiddle q . shift . fiddle r
-

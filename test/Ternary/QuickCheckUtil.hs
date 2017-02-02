@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-
 module Ternary.QuickCheckUtil where
 
 import System.TimeIt
@@ -13,12 +12,12 @@ assert description test = timeIt $ putStr text
   where text = description ++ " " ++ result ++ "  "
         result = if test then "+++ OK" else "FAILED"
 
-
 randomsR :: Random a => Int -> (a,a) -> [a]
 randomsR seed range = go (mkStdGen seed)
-  where go gen = let (a,next) = randomR range gen
-                 in a : go next
-
+  where
+    go gen = let (a,next) = randomR range gen
+             in next `seq` a : go next
+        
 flattenTests :: [TestBatch] -> [Test]
 flattenTests = concat . map unbatch
 

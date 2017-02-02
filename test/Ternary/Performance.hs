@@ -1,26 +1,35 @@
-module Ternary.Performance where
+module Ternary.Performance (performance) where
 
 import System.TimeIt
 
 import Ternary.Core.Digit (T2(..))
 import Ternary.List.Exact
-import Ternary.List.ExactNum
+import Ternary.List.ExactNum ()
 import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.QuickCheckUtil (randomsR, assert)
-
 
 randomT2s :: Int -> [T2]
 randomT2s seed = map toEnum (randomsR seed (0,4))
 
+randomExact :: Int -> Exact
+randomExact seed = Exact (randomT2s seed) 0
+
 assertWarm :: IO ()
 assertWarm = assert "  Warmup: " warmup
 
+-- The time needed to construct random test samples must be excluded
+-- from measurements.  On the flip side, the time to construct the
+-- final result of a computation must be included.  The following
+-- ensures the first n digits of an exact number are fully evaluated:
 force :: Int -> Exact -> IO ()
-force n x = streamDigits x !! n `seq` return ()
+force n = (return $!) . forceElements . take n . streamDigits
+
+forceElements :: [a] -> ()
+forceElements = foldr seq ()
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y =
-  force (n+2) x
+     force (n+2) x
   >> force (n+2) y
   >> putStr "  Fine Structure   "
   >> time multiplyAltFS
@@ -28,13 +37,8 @@ timeMultiplication n x y =
   >> time multiplyAltAL
   where time (**) = timeIt $ force n (x ** y)
 
-
-a,b :: Exact
-a = Exact (randomT2s 0) 0
-b = Exact (randomT2s 1) 0
-
 performance =
   putStrLn "\nPerformance:"
   >> assertWarm
-  >> timeMultiplication 2000 a b
+  >> timeMultiplication 3000 (randomExact 0) (randomExact 1)
 
