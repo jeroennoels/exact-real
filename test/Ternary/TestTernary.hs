@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 
-module Ternary.TestTernary where
+module Ternary.TestTernary (blackBoxTest, coreTest, fastTest) where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact (Exact(Exact))
@@ -130,8 +130,8 @@ testTriad =
    first ("Multiplicative Triad - " ++) $ semanticMonoid (Product triad),
    first ("Ordered Triad - " ++ ) $ semanticOrd triad]
 
-testTernary :: TestBatch
-testTernary =
+testBasicTernary :: TestBatch
+testBasicTernary =
   ("Basic properties of redundant ternary representation",
    [("Invariant under redundancy", property qcFiddle),
     ("Convert between triad and exact", qcTriadExactConversion),
@@ -151,7 +151,7 @@ testMultiplication = first ("Multiplicative FiniteExact - " ++) $
 
 alternativeTests :: TestBatch
 alternativeTests =
-  ("Alternative tests - using other ways to generate test data",
+  ("Alternative tests, other ways to generate test data, other algorithms",
    [("Exact integer addition",
      property qcIntegerAddition),
     ("Integer multiplication 1",
@@ -159,18 +159,26 @@ alternativeTests =
     ("Integer multiplication 2",
      property $ qcIntegerMultiplication multiplyAltIE),
     ("Integer multiplication 3",
-     property $ qcIntegerMultiplication multiplyAltAL),
-    ("Scalar multiplication",
+     property $ qcIntegerMultiplication multiplyAltAL)])
+
+miscUnitTest :: TestBatch
+miscUnitTest = 
+  ("Miscellaneous unit tests",
+   [("Scalar multiplication",
      property qcScalar),
     ("Multiplication self terms",
      property qcSelf),
     ("Kernel chain",
      property qcChain)])
 
-suite = testTriad ++
-        [testTernary,
-         testAddition,
-         testMultiplication,
-         alternativeTests]
+coreTest = quickSuite $
+  [testBasicTernary, miscUnitTest]
+  
+blackBoxTest = quickSuite $ 
+  testTriad ++
+  [testAddition,
+   testMultiplication,
+   alternativeTests]
 
-fast = quickCheck $ property $ qcIntegerMultiplication multiplyAltAL
+fastTest = quickCheck $
+  property $ qcIntegerMultiplication multiplyAltAL

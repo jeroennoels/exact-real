@@ -29,8 +29,8 @@ fiddleEven _ x = x
 fiddle :: [Bool] -> FiniteExact -> FiniteExact
 fiddle qs = unsafeApplyFinite (fiddleEven qs)
 
--- Compose several ways of fiddling.
--- Shift to fiddle in odd positions too.
+-- Compose several ways of fiddling, but preserve semantics.
+-- Shift to fiddle in odd positions.
 -- Employ the symmetry of negation.
 fiddleMore :: [Bool] -> [Bool] -> [Bool] -> FiniteExact -> FiniteExact
 fiddleMore p q r = negate . fiddle p . negate . fiddle q . shift . fiddle r

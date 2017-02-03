@@ -59,7 +59,7 @@ secondStateBundle, normalStateBundle :: Bundle
 secondStateBundle = assertSize (fst bundlePair) 409
 normalStateBundle = assertSize (snd bundlePair) 1540
 
-data CodePoint = Normal Int | Second Int
+data CodePoint = Normal Int | Second Int deriving Eq
 
 rangeCheck :: Ord a => a -> a -> a -> a
 rangeCheck lo hi x

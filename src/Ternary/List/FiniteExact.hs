@@ -1,6 +1,6 @@
 module Ternary.List.FiniteExact (
   FiniteExact,
-  offset, shift, shiftBy, takeFinite, integralPart,
+  offset, shift, takeFinite, integralPart,
   infiniteExact, finiteLength, unwrapFinite, unsafeFinite,
   unsafeApplyFinite, unsafeLift, truncateLift,
   triadToFiniteExact, finiteExactToTriad,
@@ -52,11 +52,9 @@ unsafeFinite = Finite
 unwrapFinite :: FiniteExact -> Exact
 unwrapFinite (Finite x) = x
 
+-- Shift to the right but preserve semantics.  
 shift :: FiniteExact -> FiniteExact
 shift (Finite (Exact x p)) = Finite (Exact (O0:x) (p+1))
-
-shiftBy :: Integral a => a -> FiniteExact -> FiniteExact
-shiftBy n = unsafeApplyFinite (prepend n)
 
 finiteLength :: Integral i => FiniteExact -> i
 finiteLength (Finite (Exact x _)) = genericLength x

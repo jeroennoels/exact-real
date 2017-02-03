@@ -1,4 +1,4 @@
-module Ternary.Performance (performance) where
+module Ternary.Performance (performanceTest) where
 
 import System.TimeIt
 
@@ -7,7 +7,7 @@ import Ternary.Util.Misc (forceElements)
 import Ternary.List.Exact
 import Ternary.List.ExactNum ()
 import Ternary.Compiler.ArrayLookup (warmup)
-import Ternary.QuickCheckUtil (randomsR, assert)
+import Ternary.QuickCheckUtil (randomsR)
 
 randomT2s :: Int -> [T2]
 randomT2s seed = map toEnum (randomsR seed (0,4))
@@ -35,8 +35,7 @@ timeMultiplication n x y =
   >> time multiplyAltAL
   where time (**) = timeIt $ force n (x ** y)
 
-performance =
+performanceTest =
   putStrLn "\nPerformance:"
   >> assertWarm
-  >> timeMultiplication 3000 (randomExact 0) (randomExact 1)
-
+  >> timeMultiplication 2000 (randomExact 0) (randomExact 1)
