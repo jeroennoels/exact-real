@@ -7,30 +7,34 @@ import Ternary.Core.Digit (T2(..), allT2)
 import Ternary.Util.Misc (cross)
 import Ternary.Compiler.ArrayLookup
 import Ternary.Compiler.StateSpace
-
 import Ternary.QuickCheckUtil (assert)
 
-domainIn = [M2,P2] `cross` [0..1539] ++ [M1,O0,P1] `cross` [0..1948]
+-- endomorphism with domain
+data Endo a = Endo {dom :: [a], fun :: a -> a}
 
-domainOut = allT2 `cross` [0..1948]
+isIndentity :: Eq a => Endo a -> Bool
+isIndentity endo = null $ filter pred (dom endo)
+  where pred a = fun endo a /= a
 
 compilerTest = putStrLn "\nCompiler unit tests:" >> a1 >> a2
   where
     a1 = assert "  splitIn versus MixIn:  " $
-         isIndentity splitAndMixIn [0..8926] &&
-         isIndentity mixAndSplitIn domainIn
+         isIndentity splitAndMixIn &&
+         isIndentity mixAndSplitIn
     a2 = assert "  splitOut versus mixOut:" $
-         isIndentity mixAndSplitOut domainOut
+         isIndentity mixAndSplitOut
 
-splitAndMixIn :: Int16 -> Int16
-splitAndMixIn = mixIn . second unwrap . splitIn . fromIntegral
+splitAndMixIn :: Endo Int16
+splitAndMixIn = Endo {
+  dom = [0..8926],
+  fun = mixIn . second unwrap . splitIn . fromIntegral}
 
-mixAndSplitIn :: (T2, Int16) -> (T2, Int16)
-mixAndSplitIn = second unwrap . splitIn . fromIntegral . mixIn
+mixAndSplitIn :: Endo (T2, Int16)
+mixAndSplitIn = Endo {
+  dom = [M2,P2] `cross` [0..1539] ++ [M1,O0,P1] `cross` [0..1948],
+  fun = second unwrap . splitIn . fromIntegral . mixIn}
 
-mixAndSplitOut :: (T2, Int16) -> (T2, Int16)
-mixAndSplitOut = splitOut . mixOut . second (wrap . fromIntegral)
-
-isIndentity :: Eq a => (a -> a) -> [a] -> Bool
-isIndentity f = null . filter pred
-  where pred a = f a /= a
+mixAndSplitOut :: Endo (T2, Int16)
+mixAndSplitOut = Endo {
+  dom = allT2 `cross` [0..1948],
+  fun = splitOut . mixOut . second (wrap . fromIntegral)}
