@@ -4,10 +4,9 @@ import Control.Monad (liftM2)
 
 import Ternary.QuickCheckUtil (assert)
 import Ternary.Util.Misc (Binop)
-import Ternary.Core.Digit
+import Ternary.Core.Digit (T2, allT2)
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
-
 
 nDigits :: Int -> [[T2]]
 nDigits n = sequence $ replicate n allT2
