@@ -1,8 +1,7 @@
 module Ternary.TestKernel (
   qcChain, testChainForSpaceLeak) where
 
-import Ternary.Core.Kernel
-
+import Ternary.Core.Kernel (Kernel, chain)
 
 type S = Int
 

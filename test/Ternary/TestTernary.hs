@@ -5,11 +5,11 @@ module Ternary.TestTernary (blackBoxTest, coreTest, fastTest) where
 import Ternary.Core.Digit
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
-import Ternary.List.FiniteExactNum
-import Ternary.List.Aux
-import Ternary.QuickCheckUtil
-import Ternary.Util.Misc
-import Ternary.Util.Triad
+import Ternary.List.FiniteExactNum ()
+import Ternary.List.Aux (selfList, scalarFiniteExact)
+import Ternary.QuickCheckUtil (quickSuite)
+import Ternary.Util.Misc (Binop, eq3)
+import Ternary.Util.Triad (Triad, makeTriad)
 import Ternary.Fiddle
 import Ternary.TestKernel (qcChain)
 
@@ -20,7 +20,7 @@ import Data.Monoid (Sum(Sum), Product(Product))
 import Test.QuickCheck
 import Test.QuickCheck.Checkers hiding (Binop)
 import Test.QuickCheck.Utils (isCommutable)
-import Test.QuickCheck.Classes
+import Test.QuickCheck.Classes (semanticMonoid, semanticOrd)
 
 instance Arbitrary T1 where
   arbitrary = elements [M, O, P]
@@ -93,6 +93,7 @@ qcAddT2 a b = fromT4 (addT2 a b) == fromT2 a + fromT2 b
 qcMultiplyT2 :: T2 -> T2 -> Bool
 qcMultiplyT2 a b = fromT4 (multiplyT2 a b) == fromT2 a * fromT2 b
 
+-- Verify simple algebraic properties such as 2*a = (-2)*(-a) = a+a
 qcCombinedPropertiesT2 :: T2 -> Bool
 qcCombinedPropertiesT2 a = let na = negateT2 a
   in eq3 (multiplyT2 P2 a) (multiplyT2 M2 na) (addT2 a a) &&
@@ -107,20 +108,20 @@ qcCarry a = let (c,r) = carry a
   in fromT4 a == 3 * fromT1 c + fromT1 r
 
 qcScalar :: T2 -> Integer -> Bool
-qcScalar a n = scalarFiniteExact a (fromInteger n) == fromInteger (fromT2 a * n)
+qcScalar a n = scalarFiniteExact a (exact n) == exact (fromT2 a * n)
 
 -- Use an interesting hard-coded example to test the self kernel
 -- carry (P1 * P2) = (P,M) ~ (P1,M)
-
 qcSelf :: T2 -> T1 -> T2 -> Bool
 qcSelf u v w = take 3 (selfList P1 P2 inp) == out
   where inp = [u, embedT1 v, w]
         out = [P1, addT1 M v, w]
 
-
+-- Monoid selector
 triad :: Triad
 triad = undefined
 
+-- Monoid selector
 finiteExact :: FiniteExact
 finiteExact = undefined
 
