@@ -6,6 +6,7 @@ import Ternary.TestTernary (blackBoxTest, coreTest, fastTest)
 import Ternary.Performance (performanceTest)
 import Ternary.Exhaust (exhaustMultiplication)
 import Ternary.TestCompiler (compilerTest)
+import Ternary.Examples ()
 
 main = getArgs >>= run >> putStrLn ""
 

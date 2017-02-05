@@ -4,15 +4,13 @@ import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum
-import Ternary.Triad
+import Ternary.Util.Triad
 
 x = Exact [P1,O0,undefined] 0
 y = Exact [P2,P2,undefined] 0
-z = Exact (cycle ds) 0 where ds = [M2,M1,O0,P1,P2]
+z = Exact (cycle allT2) 0
 
---  x+x
---  x*x
---  y*y
+--  x+x, x*x, y*y
                              
 z2 = z * z
 as = streamDigits z2

@@ -13,8 +13,8 @@ import Ternary.QuickCheckUtil (assert)
 data Endo a = Endo {dom :: [a], fun :: a -> a}
 
 isIndentity :: Eq a => Endo a -> Bool
-isIndentity endo = null $ filter pred (dom endo)
-  where pred a = fun endo a /= a
+isIndentity endo = null $ filter wrong (dom endo)
+  where wrong a = fun endo a /= a
 
 compilerTest = putStrLn "\nCompiler unit tests:" >> a1 >> a2
   where

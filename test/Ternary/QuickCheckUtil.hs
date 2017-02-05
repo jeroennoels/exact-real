@@ -17,7 +17,7 @@ randomsR seed range = go (mkStdGen seed)
   where
     go gen = let (a,next) = randomR range gen
              in next `seq` a : go next
-        
+
 flattenTests :: [TestBatch] -> [Test]
 flattenTests = concat . map unbatch
 
@@ -27,9 +27,6 @@ quickSuite = sequence_ . map quickBatch
 test n prop = quickCheckWithResult args prop
   where args = stdArgs { maxSuccess = n, chatty = False }
 
-
 instance EqProp Rational where (=-=) = eq
-
 instance Eq a => EqProp (Sum a) where (=-=) = eq
-
 instance Eq a => EqProp (Product a) where (=-=) = eq
