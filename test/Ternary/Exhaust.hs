@@ -15,11 +15,12 @@ toFiniteExact :: [T2] -> FiniteExact
 toFiniteExact ds = unsafeFinite (Exact ds 0)
 
 exhaust :: Int -> [FiniteExact]
-exhaust depth = map toFiniteExact (nDigits depth)
+exhaust = map toFiniteExact . nDigits
 
 checkOneCombination :: Binop FiniteExact -> FiniteExact -> FiniteExact -> Bool
 checkOneCombination (**) x y =
-  finiteExactToTriad (x ** y) == finiteExactToTriad x * finiteExactToTriad y
+  finiteExactToTriad (x ** y) ==
+  finiteExactToTriad x * finiteExactToTriad y
 
 checkAllCombinations:: Int -> Bool
 checkAllCombinations depth =
@@ -30,4 +31,3 @@ checkAllCombinations depth =
 exhaustMultiplication :: Int -> IO ()
 exhaustMultiplication depth = assert desc (checkAllCombinations depth)
   where desc = "\nExhaust multiplication to depth " ++ show depth
-
