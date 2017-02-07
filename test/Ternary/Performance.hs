@@ -29,13 +29,11 @@ timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y =
      force (n+2) x
   >> force (n+2) y
-  >> putStr "  Fine Structure   "
-  >> time multiplyAltFS
-  >> putStr "  Array Lookup     "
+  >> putStr "  Array Lookup  "
   >> time multiplyAltAL
   where time (**) = timeIt $ force n (x ** y)
 
 performanceTest =
   putStrLn "\nPerformance:"
   >> assertWarm
-  >> timeMultiplication 2000 (randomExact 0) (randomExact 1)
+  >> timeMultiplication 4000 (randomExact 0) (randomExact 1)

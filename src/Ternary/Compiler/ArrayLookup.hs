@@ -8,7 +8,7 @@ import Data.Array.Unboxed
 import GHC.Int (Int16)
 
 import Ternary.Util.Misc (cross, toAssoc, forceElements)
-import Ternary.Core.Digit
+import Ternary.Core.Digit (T2(..), allT2T2)
 import Ternary.Core.Kernel (Kernel)
 import Ternary.Compiler.StateSpace
 import Ternary.Core.Multiplication (
@@ -32,7 +32,10 @@ mixIn (M1, i) = i + 3080
 mixIn (O0, i) = i + 5029
 mixIn (P1, i) = i + 6978
 
--- explain those hard-coded numbers
+-- We explain and verify those hard-coded numbers.  Remember that code
+-- points are represented by two adjacent integer ranges: respectively
+-- [0..1539] and [1540..1948] for normal and second step states.
+
 verifyMixIn (lo,hi) =
   mixIn (M2,0) == fromIntegral lo &&
   mixIn (P2,0) == mixIn (M2,0) + 1540 &&
@@ -40,9 +43,11 @@ verifyMixIn (lo,hi) =
   mixIn (O0,0) == mixIn (M1,0) + 1949 &&
   mixIn (P1,0) == mixIn (O0,0) + 1949 &&
   mixIn (P1,1948) == fromIntegral hi
-    
+
+-- compile-time verification
 verify :: (Int,Int) -> (Int,Int)
 verify range = if verifyMixIn range then range else error "verify"
+
 
 -- compile-time computation
 splitIn :: Int -> (T2, CodePoint)
@@ -67,6 +72,7 @@ splitOut i | i < 4096 = (M1, i - 2048)
 splitOut i | i < 6144 = (O0, i - 4096)
 splitOut i | i < 8192 = (P1, i - 6144)
 splitOut i            = (P2, i - 8192)
+
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
 appliedUniversalTriangle ab i =
