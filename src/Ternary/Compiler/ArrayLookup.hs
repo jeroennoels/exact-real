@@ -20,6 +20,11 @@ import Ternary.Core.Multiplication (
 -- the latter must really be optimized for efficiency.
 
 {-# INLINE mixIn #-}
+{-# INLINE mixOut #-}
+{-# INLINE splitIn #-}
+{-# INLINE splitOut #-}
+
+-- runtime computation
 mixIn :: (T2, Int16) -> Int16
 mixIn (M2, i) = i
 mixIn (P2, i) = i + 1540
@@ -27,27 +32,41 @@ mixIn (M1, i) = i + 3080
 mixIn (O0, i) = i + 5029
 mixIn (P1, i) = i + 6978
 
+-- explain those hard-coded numbers
+verifyMixIn (lo,hi) =
+  mixIn (M2,0) == fromIntegral lo &&
+  mixIn (P2,0) == mixIn (M2,0) + 1540 &&
+  mixIn (M1,0) == mixIn (P2,0) + 1540 &&
+  mixIn (O0,0) == mixIn (M1,0) + 1949 &&
+  mixIn (P1,0) == mixIn (O0,0) + 1949 &&
+  mixIn (P1,1948) == fromIntegral hi
+    
+verify :: (Int,Int) -> (Int,Int)
+verify range = if verifyMixIn range then range else error "verify"
+
+-- compile-time computation
 splitIn :: Int -> (T2, CodePoint)
 splitIn i
+  | i < 0 = error "splitIn"
   | i < 1540 = (M2, wrapNormal i)
   | i < 3080 = (P2, wrapNormal (i-1540))
   | i < 5029 = (M1, wrap (i-3080))
   | i < 6978 = (O0, wrap (i-5029))
   | i < 8927 = (P1, wrap (i-6978))
+  | otherwise = error "splitIn"
 
--- CodePoint wraps integers in the range [0..1948]              
+-- CodePoint wraps integers in the range [0..1948]
+-- This is a compile-time computation.
 mixOut :: (T2, CodePoint) -> Int16
 mixOut (a,code) = unwrap code + 2048 * fromIntegral (fromEnum a)
 
--- quotRem is slow
-{-# INLINE splitOut #-}
+-- runtime computation, quotRem is slow
 splitOut :: Int16 -> (T2, Int16)
 splitOut i | i < 2048 = (M2, i)
 splitOut i | i < 4096 = (M1, i - 2048)
 splitOut i | i < 6144 = (O0, i - 4096)
 splitOut i | i < 8192 = (P1, i - 6144)
 splitOut i            = (P2, i - 8192)
-
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
 appliedUniversalTriangle ab i =
@@ -56,10 +75,11 @@ appliedUniversalTriangle ab i =
 
 -- make an array for every applied universal triangle
 toArray :: (T2,T2) -> UArray Int Int16
-toArray ab = array (0,n) $ toAssoc f [0..n]
+toArray ab = array bounds $ toAssoc f domain
   where f :: Int -> Int16
         f = appliedUniversalTriangle ab
-        n = 8926
+        bounds = verify (0,8926)
+        domain = uncurry enumFromTo bounds
 
 -- we use this to hash both triangle inputs and params
 hash :: (T2,T2) -> Int
@@ -88,9 +108,8 @@ lookupInitial = unsafeAt memoInitial . hash
 
 warmup :: IO ()
 warmup = return $! forceElements samples
-  where samples :: [Int16] 
+  where samples :: [Int16]
         samples = elems memoInitial ++ map (!0) (elems memoTriangles)
-
 
 appliedTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
 appliedTriangle array = splitOut . unsafeAt array . fromIntegral . mixIn

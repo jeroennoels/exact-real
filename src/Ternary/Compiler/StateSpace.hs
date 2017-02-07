@@ -10,7 +10,7 @@ import qualified Data.Set as Set
 import Ternary.Core.Digit (T2(..), allT2, allT2T2)
 import Ternary.Core.Kernel (Kernel)
 import Ternary.Core.Multiplication
-import Ternary.Util.Misc (cross)
+import Ternary.Util.Misc (cross, rangeCheck)
 import Ternary.Util.SetUtils (reachTransitively, assertSize, tag)
 
 -- Remember: on the second step, the recursive channel of a triangle
@@ -76,17 +76,19 @@ normalStateBundle = assertSize (snd bundlePair) 1540
 -- code points.  Arrays seem to be an obvious choice, and therefor,
 -- integers provide for a convenient representation of code points.
 -- Such integer encoding for states has no meaning: it is obtained
--- from an arbitrary enumeration of the state bundle.
+-- from an arbitrary enumeration of the state bundle.  However we do
+-- want to remember that some code points correspond to a second step
+-- state while others are normal states.
 
 data CodePoint = Normal Int | Second Int deriving Eq
 
-rangeCheck :: Ord a => a -> a -> a -> a
-rangeCheck lo hi x
-  | lo <= x && x <= hi = x
-  | otherwise = error "rangeCheck"
+{-# INLINE wrapNormal #-}
+{-# INLINE wrapSecond #-}
+{-# INLINE wrap #-}
+{-# INLINE unwrap #-}
 
 wrapNormal, wrapSecond :: Int -> CodePoint
-wrapNormal = Normal . rangeCheck 0 1539
+wrapNormal = Normal . rangeCheck    0 1539
 wrapSecond = Second . rangeCheck 1540 1948
 
 wrap :: Int -> CodePoint
