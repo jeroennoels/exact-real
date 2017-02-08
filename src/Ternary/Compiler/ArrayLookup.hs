@@ -1,3 +1,5 @@
+{-# LANGUAGE UnboxedTuples #-}
+
 module Ternary.Compiler.ArrayLookup (
   splitIn, splitOut, mixIn, mixOut,
   arrayLookup, warmup) where
@@ -17,7 +19,8 @@ import Ternary.Core.Multiplication (
 
 -- The functions splitIn and mixOut are only used by the compiler,
 -- whereas mixIn and splitOut belong to the run-time.  Therefor only
--- the latter must really be optimized for efficiency.
+-- the latter must really be optimized for efficiency.  So only for
+-- these functions, we use low-level tricks such as unboxed tuples.
 
 {-# INLINE mixIn #-}
 {-# INLINE mixOut #-}
@@ -25,24 +28,24 @@ import Ternary.Core.Multiplication (
 {-# INLINE splitOut #-}
 
 -- runtime computation
-mixIn :: (T2, Int16) -> Int16
-mixIn (M2, i) = i
-mixIn (P2, i) = i + 1540
-mixIn (M1, i) = i + 3080
-mixIn (O0, i) = i + 5029
-mixIn (P1, i) = i + 6978
+mixIn :: T2 -> Int16 -> Int16
+mixIn M2 i = i
+mixIn P2 i = i + 1540
+mixIn M1 i = i + 3080
+mixIn O0 i = i + 5029
+mixIn P1 i = i + 6978
 
 -- We explain and verify those hard-coded numbers.  Remember that code
 -- points are represented by two adjacent integer ranges: respectively
 -- [0..1539] and [1540..1948] for normal and second step states.
 
 verifyMixIn (lo,hi) =
-  mixIn (M2,0) == fromIntegral lo &&
-  mixIn (P2,0) == mixIn (M2,0) + 1540 &&
-  mixIn (M1,0) == mixIn (P2,0) + 1540 &&
-  mixIn (O0,0) == mixIn (M1,0) + 1949 &&
-  mixIn (P1,0) == mixIn (O0,0) + 1949 &&
-  mixIn (P1,1948) == fromIntegral hi
+  mixIn M2 0 == fromIntegral lo &&
+  mixIn P2 0 == mixIn M2 0 + 1540 &&
+  mixIn M1 0 == mixIn P2 0 + 1540 &&
+  mixIn O0 0 == mixIn M1 0 + 1949 &&
+  mixIn P1 0 == mixIn O0 0 + 1949 &&
+  mixIn P1 1948 == fromIntegral hi
 
 -- compile-time verification
 verify :: (Int,Int) -> (Int,Int)
@@ -66,12 +69,12 @@ mixOut :: (T2, CodePoint) -> Int16
 mixOut (a,code) = unwrap code + 2048 * fromIntegral (fromEnum a)
 
 -- runtime computation, quotRem is slow
-splitOut :: Int16 -> (T2, Int16)
-splitOut i | i < 2048 = (M2, i)
-splitOut i | i < 4096 = (M1, i - 2048)
-splitOut i | i < 6144 = (O0, i - 4096)
-splitOut i | i < 8192 = (P1, i - 6144)
-splitOut i            = (P2, i - 8192)
+splitOut :: Int16 -> (# T2, Int16 #)
+splitOut i | i < 2048 = (# M2, i #)
+splitOut i | i < 4096 = (# M1, i-2048 #)
+splitOut i | i < 6144 = (# O0, i-4096 #)
+splitOut i | i < 8192 = (# P1, i-6144 #)
+splitOut i            = (# P2, i-8192 #)
 
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
@@ -117,15 +120,16 @@ warmup = return $! forceElements samples
   where samples :: [Int16]
         samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
-appliedTriangle :: UArray Int Int16 -> (T2,Int16) -> (T2,Int16)
-appliedTriangle array = splitOut . unsafeAt array . fromIntegral . mixIn
+appliedTriangle :: UArray Int Int16 -> T2 -> Int16 -> (# T2, Int16 #)
+appliedTriangle array a i = splitOut (array `unsafeAt` fromIntegral (mixIn a i))
 
 -- Because triangle parametrization has been absorbed in the state, we
--- can now simplify Ternary.Core.Kernel.chain as follows:
+-- can now simplify Ternary.Core.Kernel (chain).  But we can no longer
+-- use a polymorphic type, because of the unboxed tuples.
 
-chain :: ((a,s) -> (a,s)) -> Kernel a a [s]
+chain :: (T2 -> Int16 -> (# T2, Int16 #)) -> Kernel T2 T2 [Int16]
 chain f a (u:us) =
-  let (b,v) = f (a,u)
+  let (#b,v#) = f a u
       (c,vs) = b `seq` chain f b us
   in v `seq` (c,v:vs)
 chain _ a [] = (a,[])
@@ -133,19 +137,19 @@ chain _ a [] = (a,[])
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
 step ab = chain (appliedTriangle (lookupArray ab)) O0 -- instead of undefined
 
-newtype MulState2 = MulState2 [Int16]
+newtype MulStateAL = MulStateAL [Int16]
 
-multKernel :: Kernel (T2,T2) T2 MulState2
-multKernel ab (MulState2 us) =
+multKernel :: Kernel (T2,T2) T2 MulStateAL
+multKernel ab (MulStateAL us) =
   let (out, vs) = step ab us
-  in (out, MulState2 (lookupInitial ab:vs))
+  in (out, MulStateAL (lookupInitial ab:vs))
 
 
-instance MultiplicationState MulState2 where
+instance MultiplicationState MulStateAL where
   kernel = multKernel
   initialMultiplicationState (TriangleParam a b) =
-    MulState2 [lookupInitial (a,b)]
+    MulStateAL [lookupInitial (a,b)]
 
 -- algorithm selector
-arrayLookup :: MulState2
+arrayLookup :: MulStateAL
 arrayLookup = undefined

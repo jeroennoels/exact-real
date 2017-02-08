@@ -1,3 +1,5 @@
+{-# LANGUAGE UnboxedTuples #-}
+
 module Ternary.TestCompiler (compilerTest) where
 
 import Control.Arrow (second)
@@ -6,7 +8,7 @@ import GHC.Int (Int16)
 import Ternary.Core.Digit (T2(..), allT2)
 import Ternary.Util.Misc (cross)
 import Ternary.Compiler.ArrayLookup
-import Ternary.Compiler.StateSpace
+import Ternary.Compiler.StateSpace (wrap, unwrap)
 import Ternary.QuickCheckUtil (assert)
 
 -- endomorphism with domain
@@ -24,17 +26,20 @@ compilerTest = putStrLn "\nCompiler unit tests:" >> a1 >> a2
     a2 = assert "  splitOut versus mixOut:" $
          isIndentity mixAndSplitOut
 
+splitOutBoxed :: Int16 -> (T2, Int16)
+splitOutBoxed i = let (#a,b#) = splitOut i in (a,b)
+
 splitAndMixIn :: Endo Int16
 splitAndMixIn = Endo {
   dom = [0..8926],
-  fun = mixIn . second unwrap . splitIn . fromIntegral}
+  fun = uncurry mixIn . second unwrap . splitIn . fromIntegral}
 
 mixAndSplitIn :: Endo (T2, Int16)
 mixAndSplitIn = Endo {
   dom = [M2,P2] `cross` [0..1539] ++ [M1,O0,P1] `cross` [0..1948],
-  fun = second unwrap . splitIn . fromIntegral . mixIn}
+  fun = second unwrap . splitIn . fromIntegral . uncurry mixIn}
 
 mixAndSplitOut :: Endo (T2, Int16)
 mixAndSplitOut = Endo {
   dom = allT2 `cross` [0..1948],
-  fun = splitOut . mixOut . second (wrap . fromIntegral)}
+  fun = splitOutBoxed . mixOut . second (wrap . fromIntegral)}
