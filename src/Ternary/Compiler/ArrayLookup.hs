@@ -1,4 +1,5 @@
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Ternary.Compiler.ArrayLookup (
   splitIn, splitOut, mixIn, mixOut,
@@ -121,7 +122,9 @@ warmup = return $! forceElements samples
         samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
 appliedTriangle :: UArray Int Int16 -> T2 -> Int16 -> (# T2, Int16 #)
-appliedTriangle array a i = splitOut (array `unsafeAt` mixIn a (fromIntegral i))
+appliedTriangle array a i =
+  let !ix = mixIn a (fromIntegral i)
+  in splitOut (array `unsafeAt` ix)
 
 -- Because triangle parametrization has been absorbed in the state, we
 -- can now simplify Ternary.Core.Kernel (chain).  But we can no longer
@@ -129,14 +132,15 @@ appliedTriangle array a i = splitOut (array `unsafeAt` mixIn a (fromIntegral i))
 
 chain :: (T2 -> Int16 -> (# T2, Int16 #)) -> Kernel T2 T2 [Int16]
 chain f a (u:us) =
-  let (#b,v#) = f a u
-      (c,vs) = b `seq` chain f b us
-  in v `seq` (c,v:vs)
+  let (# !b, !v #) = f a u
+      (c, vs) = chain f b us
+  in (c, v:vs)
 chain _ a [] = (a,[])
 
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
-step ab = chain (appliedTriangle (lookupArray ab)) O0 -- instead of undefined
-
+step input = let !arr = lookupArray input
+             in chain (appliedTriangle arr) O0 -- instead of undefined
+                
 newtype MulStateAL = MulStateAL [Int16]
 
 multKernel :: Kernel (T2,T2) T2 MulStateAL
