@@ -110,6 +110,7 @@ memoInitial = array hashRange assoc
   where assoc = map (hash &&& init) allT2T2
         init = unwrap . initialCodePoint . uncurry TriangleParam
 
+-- obtain the correct precomputed array for a given input
 lookupArray :: (T2,T2) -> UArray Int Int16
 lookupArray = unsafeAt memoTriangles . hash
 
@@ -140,14 +141,14 @@ chain _ a [] = (a,[])
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
 step input = let !arr = lookupArray input
              in chain (appliedTriangle arr) O0 -- instead of undefined
-                
+
+
 newtype MulStateAL = MulStateAL [Int16]
 
 multKernel :: Kernel (T2,T2) T2 MulStateAL
 multKernel ab (MulStateAL us) =
   let (out, vs) = step ab us
   in (out, MulStateAL (lookupInitial ab:vs))
-
 
 instance MultiplicationState MulStateAL where
   kernel = multKernel
