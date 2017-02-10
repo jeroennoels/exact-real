@@ -10,8 +10,8 @@ type Kernel input output state = input -> state -> (output, state)
 -- Sequential composition
 serial :: Kernel a b s -> Kernel b c t -> Kernel a c (s,t)
 serial f g a (s,t) = let (b,u) = f a s
-                         (c,v) = g b t
-                     in (c,(u,v))
+                         (c,v) = b `seq` g b t
+                     in c `seq` (c,(u,v))
 
 -- Parallel composition
 zipKernelsWith ::

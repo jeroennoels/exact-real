@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Ternary.Compiler.StateSpace (
   CodePoint, initialCodePoint,
   universalTriangle, integerEncoding,
@@ -80,7 +82,7 @@ normalStateBundle = assertSize (snd bundlePair) 1540
 -- want to remember that some code points correspond to a second step
 -- state while others are normal states.
 
-data CodePoint = Normal Int | Second Int deriving Eq
+data CodePoint = Normal !Int | Second !Int deriving Eq
 
 {-# INLINE wrapNormal #-}
 {-# INLINE wrapSecond #-}
