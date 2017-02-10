@@ -29,12 +29,12 @@ compilerTest = putStrLn "\nCompiler unit tests:" >> a1 >> a2
 splitOutBoxed :: Int16 -> (T2, Int16)
 splitOutBoxed i = let (#a,b#) = splitOut i in (a,b)
 
-splitAndMixIn :: Endo Int16
+splitAndMixIn :: Endo Int
 splitAndMixIn = Endo {
   dom = [0..8926],
-  fun = uncurry mixIn . second unwrap . splitIn . fromIntegral}
+  fun = uncurry mixIn . second unwrap . splitIn}
 
-mixAndSplitIn :: Endo (T2, Int16)
+mixAndSplitIn :: Endo (T2, Int)
 mixAndSplitIn = Endo {
   dom = [M2,P2] `cross` [0..1539] ++ [M1,O0,P1] `cross` [0..1948],
   fun = second unwrap . splitIn . fromIntegral . uncurry mixIn}

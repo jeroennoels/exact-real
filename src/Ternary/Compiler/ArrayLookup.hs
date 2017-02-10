@@ -28,7 +28,7 @@ import Ternary.Core.Multiplication (
 {-# INLINE splitOut #-}
 
 -- runtime computation
-mixIn :: T2 -> Int16 -> Int16
+mixIn :: T2 -> Int -> Int
 mixIn M2 i = i
 mixIn P2 i = i + 1540
 mixIn M1 i = i + 3080
@@ -40,12 +40,12 @@ mixIn P1 i = i + 6978
 -- [0..1539] and [1540..1948] for normal and second step states.
 
 verifyMixIn (lo,hi) =
-  mixIn M2 0 == fromIntegral lo &&
+  mixIn M2 0 == lo &&
   mixIn P2 0 == mixIn M2 0 + 1540 &&
   mixIn M1 0 == mixIn P2 0 + 1540 &&
   mixIn O0 0 == mixIn M1 0 + 1949 &&
   mixIn P1 0 == mixIn O0 0 + 1949 &&
-  mixIn P1 1948 == fromIntegral hi
+  mixIn P1 1948 == hi
 
 -- compile-time verification
 verify :: (Int,Int) -> (Int,Int)
@@ -121,7 +121,7 @@ warmup = return $! forceElements samples
         samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
 appliedTriangle :: UArray Int Int16 -> T2 -> Int16 -> (# T2, Int16 #)
-appliedTriangle array a i = splitOut (array `unsafeAt` fromIntegral (mixIn a i))
+appliedTriangle array a i = splitOut (array `unsafeAt` mixIn a (fromIntegral i))
 
 -- Because triangle parametrization has been absorbed in the state, we
 -- can now simplify Ternary.Core.Kernel (chain).  But we can no longer
