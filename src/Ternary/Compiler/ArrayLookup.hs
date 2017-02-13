@@ -42,15 +42,16 @@ mixIn P1 i = i + 6978
 
 verifyMixIn (lo,hi) =
   mixIn M2 0 == lo &&
-  mixIn P2 0 == mixIn M2 0 + 1540 &&
-  mixIn M1 0 == mixIn P2 0 + 1540 &&
-  mixIn O0 0 == mixIn M1 0 + 1949 &&
-  mixIn P1 0 == mixIn O0 0 + 1949 &&
-  mixIn P1 1948 == hi
+  mixIn P2 0 == mixIn M2 0 + 1540 &&    -- M2: only normal states
+  mixIn M1 0 == mixIn P2 0 + 1540 &&    -- P2: only normal states
+  mixIn O0 0 == mixIn M1 0 + 1949 &&    -- M1: all states
+  mixIn P1 0 == mixIn O0 0 + 1949 &&    -- O0: all states
+  mixIn P1 1948 == hi                   -- P1: all states
 
 -- compile-time verification
 verify :: (Int,Int) -> (Int,Int)
-verify range = if verifyMixIn range then range else error "verify"
+verify range = if verifyMixIn range then range
+               else error "ArrayLookup (verify)"
 
 
 -- compile-time computation
@@ -97,7 +98,8 @@ hash (a,b) = 5 * fromEnum a + fromEnum b
 
 -- consistency check on the hash function
 hashRange = if map hash allT2T2 == [0..24]
-            then (0,24) else error "hashRange"
+            then (0,24)
+            else error "ArrayLookup (hashRange)"
 
 -- top level memoization
 memoTriangles :: Array Int (UArray Int Int16)
