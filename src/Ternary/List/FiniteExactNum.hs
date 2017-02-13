@@ -19,7 +19,6 @@ instance Num FiniteExact where
   (+) = finitizeAdd (+)
   (*) = finitizeMult (*)
 
-
 zero, one :: FiniteExact
 zero = 0
 one = 1

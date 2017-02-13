@@ -1,7 +1,7 @@
 module Ternary.Core.Addition (Sa(Sa0), plus) where
 
-import Ternary.Core.Kernel
-import Ternary.Core.Digit
+import Ternary.Core.Kernel (Kernel)
+import Ternary.Core.Digit (T2(..), T4(..))
 
 -- The addition kernel needs only three states.
 

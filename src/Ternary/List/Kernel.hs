@@ -1,6 +1,6 @@
 module Ternary.List.Kernel where
 
-import Ternary.Core.Kernel
+import Ternary.Core.Kernel (Kernel)
 
 -- intentionally undefined on finite data:
 

@@ -5,12 +5,13 @@ import Control.Monad (liftM2)
 type Binop a = a -> a -> a
 
 {-# INLINE rangeCheck #-}
+
 rangeCheck :: Ord a => a -> a -> a -> a
 rangeCheck lo hi x
   | lo <= x && x <= hi = x
   | otherwise = error "rangeCheck"
 
--- Force all the elements of a list, shallow, not deep.
+-- Force all the elements of a list.  Shallow, not deep.
 forceElements :: [a] -> ()
 forceElements = foldr seq ()
 

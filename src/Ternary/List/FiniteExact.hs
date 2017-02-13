@@ -1,5 +1,5 @@
 module Ternary.List.FiniteExact (
-  FiniteExact,
+  FiniteExact,  -- we do not want to export the constructor
   offset, shift, takeFinite, integralPart,
   infiniteExact, finiteLength, unwrapFinite, unsafeFinite,
   unsafeApplyFinite, unsafeLift, truncateLift,
@@ -9,8 +9,8 @@ module Ternary.List.FiniteExact (
 
 import Data.List (genericLength, genericTake)
 
-import Ternary.Core.Digit
-import Ternary.Util.Triad
+import Ternary.Core.Digit (T2(O0), fromT2)
+import Ternary.Util.Triad (Triad, div3, exp3, triadNumerator, triadExponent)
 import Ternary.Util.Misc (Binop)
 import Ternary.Core.Multiplication (fineStructure)
 import Ternary.Compiler.StateSpace (integerEncoding)
@@ -18,6 +18,7 @@ import Ternary.List.Exact hiding (
   multiplyAltIE, multiplyAltFS, multiplyAltAL)
 import qualified Ternary.List.Exact as Exact (
   multiplyAltIE, multiplyAltFS, multiplyAltAL)
+
 
 -- The main reason for having a dedicated FiniteExact type is that
 -- QuickCheck tests will give us finite lists as test data.  So we
@@ -37,7 +38,7 @@ unsafeApplyFinite f (Finite (Exact x p)) = Finite (Exact (f x) p)
 -- Only use the following when you know the given function transforms
 -- finite to finite:
 unsafeLift :: (Exact -> Exact) -> FiniteExact -> FiniteExact
-unsafeLift f (Finite t) = Finite (f t) 
+unsafeLift f (Finite t) = Finite (f t)
 
 truncateLift :: Int -> (Exact -> Exact) -> FiniteExact -> FiniteExact
 truncateLift n f x = takeFinite cut inf
@@ -48,11 +49,11 @@ truncateLift n f x = takeFinite cut inf
 unsafeFinite :: Exact -> FiniteExact
 unsafeFinite = Finite
 
--- We do not want to export the constructor of FiniteExact.
+-- because we do not export the constructor of FiniteExact
 unwrapFinite :: FiniteExact -> Exact
 unwrapFinite (Finite x) = x
 
--- Shift to the right but preserve semantics.  
+-- Shift to the right but preserve semantics.
 shift :: FiniteExact -> FiniteExact
 shift (Finite (Exact x p)) = Finite (Exact (O0:x) (p+1))
 
@@ -61,12 +62,12 @@ finiteLength (Finite (Exact x _)) = genericLength x
 
 offset :: FiniteExact -> Integer
 offset (Finite (Exact _ p)) = p
-                                      
+
 takeFinite :: Integral i => i -> Exact -> FiniteExact
 takeFinite n (Exact x p) = Finite $ Exact (genericTake n x) p
 
 integralPart :: Exact -> FiniteExact
-integralPart exact@(Exact x p) = takeFinite p exact 
+integralPart exact@(Exact x p) = takeFinite p exact
 
 -- Now we define the semantics of a finite list of T2 digits.
 

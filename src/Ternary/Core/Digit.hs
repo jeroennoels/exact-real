@@ -16,6 +16,7 @@ data T2 = M2 | M1 | O0 | P1 | P2 deriving (Show, Eq, Ord, Enum)
 
 allT2 = [M2, M1, O0, P1, P2]
 
+allT2T2 :: [(T2,T2)]
 allT2T2 = allT2 `cross` allT2
 
 -- We want to add and multiply ternary digits from the above range.
@@ -32,7 +33,6 @@ data T4 = Ma4 | Ma3 | Ma2 | Ma1 | Oa0 | Pa1 | Pa2 | Pa3 | Pa4
 data T1 = M | O | P deriving (Show)
 
 -- Negation is trivial because our digit range is symmetric.
-
 negateT2 :: T2 -> T2
 negateT2 M2 = P2
 negateT2 M1 = P1

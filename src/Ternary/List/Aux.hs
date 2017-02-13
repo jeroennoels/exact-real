@@ -1,14 +1,14 @@
 -- Just to support unit testing.
-
 module Ternary.List.Aux where
 
-import Ternary.Core.Digit
-import Ternary.Core.Addition
-import Ternary.Core.Multiplication
-import Ternary.Core.Kernel
-import Ternary.List.Kernel
-import Ternary.List.Exact
-import Ternary.List.FiniteExact
+import Ternary.Core.Digit (T2)
+import Ternary.Core.Addition (Sa(Sa0))
+import Ternary.Core.Multiplication (scalar, selfTerms)
+import Ternary.Core.Kernel (Kernel, FirstTwoSteps(Step0))
+import Ternary.List.Kernel (recurse)
+import Ternary.List.Exact (Exact(Exact))
+import Ternary.List.FiniteExact (FiniteExact, truncateLift)
+
 
 scalarExact :: T2 -> Exact -> Exact
 scalarExact a (Exact x p) = Exact y (p+1)

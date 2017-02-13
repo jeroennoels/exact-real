@@ -15,11 +15,10 @@ import Ternary.Compiler.ArrayLookup (arrayLookup)
 
 prepend :: Integral n => n -> [T2] -> [T2]
 prepend n as = genericReplicate nn O0 ++ as
-  where nn = assertNonNegative "Ternary.List.Exact (prepend)" n 
+  where nn = assertNonNegative "Ternary.List.Exact (prepend)" n
 
--- semantics of (Exact [] n) is 3^n
--- semantics of (Exact [P1] 0) is 1/3
-        
+-- semantics of (Exact [P1] n) is 1/3 * 3^n
+
 data Exact = Exact [T2] Integer deriving Show
 
 streamDigits :: Exact -> [T2]
@@ -50,7 +49,7 @@ add x y = recurse plus (zipWith addT2 x y) Sa0
 addExact :: Binop Exact
 addExact (Exact x p) (Exact y q) = Exact z (s+1)
   where s = max p q
-        z = add (prepend (s-p) x) (prepend (s-q) y) 
+        z = add (prepend (s-p) x) (prepend (s-q) y)
 
 -- The purpose of the MultiplicationState argument is to select a
 -- particular kernel implementation.  Only its type matters, the value
