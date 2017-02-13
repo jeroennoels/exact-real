@@ -70,7 +70,7 @@ buildCircuit (TriangleParam a b) =
 instance TriangleState TS where
   initialState = const initialTS
   isSecondState = stepMatch Step1
-  makeTriangle param input (TS s) = second TS $ buildCircuit param input s
+  makeTriangle param input (TS s) = second TS $! buildCircuit param input s
   
 chained :: TriangleState s => (T2,T2) -> [TriangleParam] -> Kernel T2 T2 [s]
 chained = chain . applyTriangle
