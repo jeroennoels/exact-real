@@ -10,7 +10,7 @@ import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
 import Ternary.List.Kernel (recurse)
 import Ternary.Compiler.StateSpace (integerEncoding)
-import Ternary.Compiler.ArrayLookup (arrayLookup)
+import Ternary.Compiler.ArrayLookup (arrayLookup, arrayState)
 
 
 prepend :: Integral n => n -> [T2] -> [T2]
@@ -71,3 +71,6 @@ multiplyAltIE = multiplyExact integerEncoding
 
 multiplyAltAL :: Binop Exact
 multiplyAltAL = multiplyExact arrayLookup
+
+multiplyAltAS :: Binop Exact
+multiplyAltAS = multiplyExact arrayState

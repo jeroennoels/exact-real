@@ -5,7 +5,7 @@ module Ternary.List.FiniteExact (
   unsafeApplyFinite, unsafeLift, truncateLift,
   triadToFiniteExact, finiteExactToTriad,
   finitizeAdd, finitizeMult,
-  multiplyAltFS, multiplyAltIE, multiplyAltAL) where
+  multiplyAltFS, multiplyAltIE, multiplyAltAL, multiplyAltAS) where
 
 import Data.List (genericLength, genericTake)
 
@@ -14,10 +14,12 @@ import Ternary.Util.Triad (Triad, div3, exp3, triadNumerator, triadExponent)
 import Ternary.Util.Misc (Binop)
 import Ternary.Core.Multiplication (fineStructure)
 import Ternary.Compiler.StateSpace (integerEncoding)
+
 import Ternary.List.Exact hiding (
-  multiplyAltIE, multiplyAltFS, multiplyAltAL)
+  multiplyAltIE, multiplyAltFS, multiplyAltAL, multiplyAltAS)
+
 import qualified Ternary.List.Exact as Exact (
-  multiplyAltIE, multiplyAltFS, multiplyAltAL)
+  multiplyAltIE, multiplyAltFS, multiplyAltAL, multiplyAltAS)
 
 
 -- The main reason for having a dedicated FiniteExact type is that
@@ -116,3 +118,6 @@ multiplyAltIE = finitizeMult $ Exact.multiplyAltIE
 
 multiplyAltAL :: Binop FiniteExact
 multiplyAltAL = finitizeMult $ Exact.multiplyAltAL
+
+multiplyAltAS :: Binop FiniteExact
+multiplyAltAS = finitizeMult $ Exact.multiplyAltAS

@@ -1,13 +1,16 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE BangPatterns #-}
 
 module Ternary.Compiler.ArrayLookup (
   splitIn, splitOut, mixIn, mixOut,
-  arrayLookup, warmup) where
+  arrayLookup, arrayState,  warmup) where
 
 import Control.Arrow ((&&&))
 import Data.Array.Base (unsafeAt)
 import Data.Array.Unboxed
+import Data.Array.ST
+import Control.Monad.ST
 import GHC.Int (Int16)
 
 import Ternary.Util.Misc (cross, toAssoc, forceElements)
@@ -130,8 +133,8 @@ appliedTriangle array a i =
   in splitOut (array `unsafeAt` ix)
 
 -- Because triangle parametrization has been absorbed in the state, we
--- can now simplify Ternary.Core.Kernel (chain).  But we can no longer
--- use a polymorphic type, because of the unboxed tuples.
+-- can now simplify Ternary.Core.Kernel (chain).  It also seems faster
+-- when we avoid polymorphic types inside unboxed tuples.
 
 chain :: (T2 -> Int16 -> (# T2, Int16 #)) -> Kernel T2 T2 [Int16]
 chain f a (u:us) =
@@ -140,23 +143,71 @@ chain f a (u:us) =
   in (c, v:vs)
 chain _ a [] = (a,[])
 
+
+type ArrayConstruction s = ST s (STUArray s Int Int16)
+
+
+chainAS :: forall s . (T2 -> Int16 -> (# T2, Int16 #)) ->
+           T2 -> UArray Int Int16 -> (T2, ArrayConstruction s)
+chainAS f a us = let (#x,y#) = loop 0 a $ newArray (0,n+1) 0 in (x,y)
+  where
+    !n = snd (bounds us)
+    loop :: Int -> T2 -> ArrayConstruction s -> (# T2, ArrayConstruction s #)
+    loop i x st
+      | i > n = (#x,st#)
+      | otherwise = let !u = us `unsafeAt` i
+                        !(#b,v#) = f x u
+                        !j = i+1
+                        !writeOne = do
+                          arr <- st
+                          writeArray arr j v
+                          return arr
+                    in b `seq` loop j b writeOne
+
+
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
-step input = let !arr = lookupArray input
-             in chain (appliedTriangle arr) O0 -- instead of undefined
+step input = let !lookup = lookupArray input
+             in chain (appliedTriangle lookup) O0 -- instead of undefined
+
+stepAS :: (T2,T2) -> UArray Int Int16 -> (T2, ArrayConstruction s)
+stepAS input = let !lookup = lookupArray input
+               in chainAS (appliedTriangle lookup) O0
 
 
 newtype MulStateAL = MulStateAL [Int16]
 
-multKernel :: Kernel (T2,T2) T2 MulStateAL
-multKernel ab (MulStateAL us) =
+newtype MulStateAS = MulStateAS (UArray Int Int16) 
+
+
+multKernelAL :: Kernel (T2,T2) T2 MulStateAL
+multKernelAL ab (MulStateAL us) =
   let (out, vs) = step ab us
   in (out, MulStateAL (lookupInitial ab:vs))
 
+multKernelAS :: Kernel (T2,T2) T2 MulStateAS
+multKernelAS ab (MulStateAS us) = 
+  let (out, st) = stepAS ab us
+      initStart = do
+        arr <- st
+        writeArray arr 0 $ lookupInitial ab
+        return arr
+  in (out, MulStateAS (runSTUArray initStart))
+
+
 instance MultiplicationState MulStateAL where
-  kernel = multKernel
+  kernel = multKernelAL
   initialMultiplicationState (TriangleParam a b) =
     MulStateAL [lookupInitial (a,b)]
+
+instance MultiplicationState MulStateAS where
+  kernel = multKernelAS
+  initialMultiplicationState (TriangleParam a b) =
+    MulStateAS $ array (0,0) [(0,init)]
+    where init = lookupInitial (a,b)
 
 -- algorithm selector
 arrayLookup :: MulStateAL
 arrayLookup = undefined
+
+arrayState :: MulStateAS
+arrayState = undefined
