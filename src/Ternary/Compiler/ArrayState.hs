@@ -76,12 +76,12 @@ chainAS f start old = (x,y)
                         j = i+1  -- shift to the right
                     in loop j b (write j v construction)
 
+{-# INLINE write #-}  -- important
 
 write :: Int -> Int16 -> ArrayConstruction s -> ArrayConstruction s
 write i e st = do a <- st
                   writeArray a i e
                   return a
-
 
 stepAL :: (T2,T2) -> [Int16] -> (T2, [Int16])
 stepAL ab = chainAL triangle O0        -- instead of undefined
@@ -101,14 +101,14 @@ multKernelAL ab (MulStateAL us) =
   let (out, vs) = stepAL ab us
   in (out, MulStateAL (lookupInitial ab:vs))
 
+-- The construction of a new state array is finished by setting a new
+-- initial state at the beginning of the chain.
+
 multKernelAS :: Kernel (T2,T2) T2 MulStateAS
 multKernelAS ab (MulStateAS us) =
-  let (out, st) = stepAS ab us
-      initStart = do
-        arr <- st
-        writeArray arr 0 $ lookupInitial ab
-        return arr
-  in (out, MulStateAS (runSTUArray initStart))
+  let (out, construction) = stepAS ab us
+      finish = write 0 (lookupInitial ab) construction
+  in (out, MulStateAS (runSTUArray finish))
 
 
 instance MultiplicationState MulStateAL where
