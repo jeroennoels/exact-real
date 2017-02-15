@@ -127,8 +127,11 @@ warmup = return $! forceElements samples
   where samples :: [Int16]
         samples = elems memoInitial ++ map (!0) (elems memoTriangles)
 
-appliedTriangle :: UArray Int Int16 -> T2 -> Int16 -> (# T2, Int16 #)
-appliedTriangle array a i =
+-- unboxed universal applied triangle
+type UUAppliedTriangle = T2 -> Int16 -> (# T2, Int16 #)
+
+uuAppliedTriangle :: UArray Int Int16 -> UUAppliedTriangle
+uuAppliedTriangle array a i =
   let !ix = mixIn a (fromIntegral i)
   in splitOut (array `unsafeAt` ix)
 
@@ -136,7 +139,7 @@ appliedTriangle array a i =
 -- can now simplify Ternary.Core.Kernel (chain).  It also seems faster
 -- when we avoid polymorphic types inside unboxed tuples.
 
-chain :: (T2 -> Int16 -> (# T2, Int16 #)) -> Kernel T2 T2 [Int16]
+chain :: UUAppliedTriangle -> Kernel T2 T2 [Int16]
 chain f a (u:us) =
   let (# !b, !v #) = f a u
       (c, vs) = chain f b us
@@ -147,8 +150,8 @@ chain _ a [] = (a,[])
 type ArrayConstruction s = ST s (STUArray s Int Int16)
 
 
-chainAS :: forall s . (T2 -> Int16 -> (# T2, Int16 #)) ->
-           T2 -> UArray Int Int16 -> (T2, ArrayConstruction s)
+chainAS :: forall s . UUAppliedTriangle -> T2 ->
+           UArray Int Int16 -> (T2, ArrayConstruction s)
 chainAS f start old = (x,y)
   where
     (#x,y#) = loop lo start new
@@ -163,17 +166,17 @@ chainAS f start old = (x,y)
                     in loop j b (write j v construction)
 
 write :: Int -> Int16 -> ArrayConstruction s -> ArrayConstruction s
-write ix val st = do arr <- st 
-                     writeArray arr ix val
-                     return arr
+write i e st = do a <- st 
+                  writeArray a i e
+                  return a
 
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
 step input = let !lookup = lookupArray input
-             in chain (appliedTriangle lookup) O0 -- instead of undefined
+             in chain (uuAppliedTriangle lookup) O0 -- instead of undefined
 
 stepAS :: (T2,T2) -> UArray Int Int16 -> (T2, ArrayConstruction s)
 stepAS input = let !lookup = lookupArray input
-               in chainAS (appliedTriangle lookup) O0
+               in chainAS (uuAppliedTriangle lookup) O0
 
 
 newtype MulStateAL = MulStateAL [Int16]
