@@ -29,6 +29,8 @@ timeMultiplication :: Int -> Exact -> Exact -> IO ()
 timeMultiplication n x y =
      force (n+2) x
   >> force (n+2) y
+  >> putStr "  Array Lookup  "
+  >> time multiplyAltAL
   >> putStr "  Array State   "
   >> time multiplyAltAS
   where time (**) = timeIt $ force n (x ** y)

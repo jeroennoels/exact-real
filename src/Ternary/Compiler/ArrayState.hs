@@ -35,7 +35,7 @@ uuAppliedTriangle array a i =
   in splitOut (array `unsafeAt` ix)
 
 lookupTriangle :: (T2,T2) -> UUAppliedTriangle
-lookupTriangle = uuAppliedTriangle . lookupArray
+lookupTriangle ab = uuAppliedTriangle $! lookupArray ab
 
 
 -- Because triangle parametrization has been absorbed in the state, we
