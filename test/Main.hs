@@ -4,7 +4,7 @@ import System.Environment (getArgs)
 
 import Ternary.TestTernary (blackBoxTest, coreTest, fastTest)
 import Ternary.Performance (performanceTest)
-import Ternary.Exhaust (exhaustMultiplication)
+import Ternary.Exhaust (exhaustiveTest, exhaustMultiplication)
 import Ternary.TestCompiler (compilerTest)
 import Ternary.Examples ()
 
@@ -14,6 +14,7 @@ run ["a"] = allTests
 run ["f"] = fastTest
 run ["p"] = performanceTest
 run ["w"] = whiteBoxTest
+run ["e"] = exhaustiveTest
 run _ =  blackBoxTest
 
 whiteBoxTest = coreTest >> compilerTest

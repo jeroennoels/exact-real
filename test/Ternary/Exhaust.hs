@@ -1,12 +1,14 @@
-module Ternary.Exhaust (exhaustMultiplication) where
+module Ternary.Exhaust (exhaustMultiplication, exhaustiveTest) where
 
 import Control.Monad (liftM2)
 
+import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.QuickCheckUtil (assert)
 import Ternary.Util.Misc (Binop)
 import Ternary.Core.Digit (T2, allT2)
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
+
 
 nDigits :: Int -> [[T2]]
 nDigits n = sequence $ replicate n allT2
@@ -25,9 +27,11 @@ checkOneCombination (**) x y =
 checkAllCombinations:: Int -> Bool
 checkAllCombinations depth =
   let xs = exhaust depth
-      results = liftM2 (checkOneCombination multiplyAltAL) xs xs
+      results = liftM2 (checkOneCombination multiplyAltAS) xs xs
   in null (filter not results)
 
 exhaustMultiplication :: Int -> IO ()
 exhaustMultiplication depth = assert desc (checkAllCombinations depth)
   where desc = "\nExhaust multiplication to depth " ++ show depth
+
+exhaustiveTest = warmup >> exhaustMultiplication 5
