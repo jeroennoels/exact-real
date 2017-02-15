@@ -23,9 +23,11 @@ import Ternary.Compiler.ArrayLookup (
   mixIn, splitOut, lookupArray, lookupInitial)
 
 
--- unboxed universal applied triangle
+-- Unboxed universal applied triangle
 type UUAppliedTriangle = T2 -> Int16 -> (# T2, Int16 #)
 
+-- We want to construct an array without building an assoc list first.
+-- We rely on mutability for the construction phase only.
 type ArrayConstruction s = ST s (STUArray s Int Int16)
 
 
@@ -37,6 +39,15 @@ uuAppliedTriangle array a i =
 lookupTriangle :: (T2,T2) -> UUAppliedTriangle
 lookupTriangle ab = uuAppliedTriangle $! lookupArray ab
 
+-- We now develop two variations of the inner loop of the algorithm.
+-- The first one uses lists, and is therefor easier to understand but
+-- not very efficient.  The second approach uses mutable arrays for
+-- efficiency.  So the list variation is a stepping stone towards the
+-- array version.  We shall alternate between the two approaches, to
+-- emphasize the similarity and clarify the difference.  Both methods
+-- use arrays for lookup, but only the second one uses arrays to hold
+-- the state of the multiplication kernel.  This explains the names
+-- and their abbreviations: ArrayLookup (AL) versus ArrayState (AS).
 
 -- Because triangle parametrization has been absorbed in the state, we
 -- can now simplify Ternary.Core.Kernel (chain).  It also seems faster
@@ -67,7 +78,7 @@ chainAS f start old = (x,y)
 
 
 write :: Int -> Int16 -> ArrayConstruction s -> ArrayConstruction s
-write i e st = do a <- st 
+write i e st = do a <- st
                   writeArray a i e
                   return a
 
