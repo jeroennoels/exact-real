@@ -10,7 +10,7 @@ import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
 import Ternary.List.Kernel (recurse)
 import Ternary.Compiler.StateSpace (integerEncoding)
-import Ternary.Compiler.ArrayLookup (arrayLookup, arrayState)
+import Ternary.Compiler.ArrayState (arrayLookup, arrayState)
 
 
 prepend :: Integral n => n -> [T2] -> [T2]
