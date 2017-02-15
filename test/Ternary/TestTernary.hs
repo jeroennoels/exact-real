@@ -160,7 +160,9 @@ alternativeTests =
     ("Integer multiplication 2",
      property $ qcIntegerMultiplication multiplyAltIE),
     ("Integer multiplication 3",
-     property $ qcIntegerMultiplication multiplyAltAL)])
+     property $ qcIntegerMultiplication multiplyAltAL),
+    ("Integer multiplication 4",
+     property $ qcIntegerMultiplication multiplyAltAS)])
 
 miscUnitTest :: TestBatch
 miscUnitTest = 

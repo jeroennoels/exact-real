@@ -149,21 +149,23 @@ type ArrayConstruction s = ST s (STUArray s Int Int16)
 
 chainAS :: forall s . (T2 -> Int16 -> (# T2, Int16 #)) ->
            T2 -> UArray Int Int16 -> (T2, ArrayConstruction s)
-chainAS f a us = let (#x,y#) = loop 0 a $ newArray (0,n+1) 0 in (x,y)
+chainAS f start old = (x,y)
   where
-    !n = snd (bounds us)
+    (#x,y#) = loop lo start new
+    (lo,hi) = bounds old
+    new = newArray (lo, hi+1) (-1)
     loop :: Int -> T2 -> ArrayConstruction s -> (# T2, ArrayConstruction s #)
-    loop i x st
-      | i > n = (#x,st#)
-      | otherwise = let !u = us `unsafeAt` i
-                        !(#b,v#) = f x u
-                        !j = i+1
-                        !writeOne = do
-                          arr <- st
-                          writeArray arr j v
-                          return arr
-                    in b `seq` loop j b writeOne
+    loop i x construction
+      | i > hi = (# x, construction #)
+      | otherwise = let !u = unsafeAt old i
+                        (# !b, !v #) = f x u
+                        j = i+1  -- shift to right
+                    in loop j b (write j v construction)
 
+write :: Int -> Int16 -> ArrayConstruction s -> ArrayConstruction s
+write ix val st = do arr <- st 
+                     writeArray arr ix val
+                     return arr
 
 step :: (T2,T2) -> [Int16] -> (T2, [Int16])
 step input = let !lookup = lookupArray input
@@ -176,7 +178,7 @@ stepAS input = let !lookup = lookupArray input
 
 newtype MulStateAL = MulStateAL [Int16]
 
-newtype MulStateAS = MulStateAS (UArray Int Int16) 
+newtype MulStateAS = MulStateAS (UArray Int Int16)
 
 
 multKernelAL :: Kernel (T2,T2) T2 MulStateAL
@@ -185,7 +187,7 @@ multKernelAL ab (MulStateAL us) =
   in (out, MulStateAL (lookupInitial ab:vs))
 
 multKernelAS :: Kernel (T2,T2) T2 MulStateAS
-multKernelAS ab (MulStateAS us) = 
+multKernelAS ab (MulStateAS us) =
   let (out, st) = stepAS ab us
       initStart = do
         arr <- st
