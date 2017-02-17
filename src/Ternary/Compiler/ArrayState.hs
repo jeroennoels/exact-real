@@ -67,7 +67,8 @@ chainAS f start old = (x,y)
   where
     (#x,y#) = loop lo start new
     (lo,hi) = bounds old
-    new = newArray (lo, hi+1) (-1)
+    new = newArray_ (lo, hi+1)
+    -- the inner loop needs an explicit type
     loop :: Int -> T2 -> ArrayConstruction s -> (# T2, ArrayConstruction s #)
     loop i x construction
       | i > hi = (# x, construction #)
@@ -77,11 +78,11 @@ chainAS f start old = (x,y)
                     in loop j b (write j v construction)
 
 {-# INLINE write #-}  -- important
-
 write :: Int -> Int16 -> ArrayConstruction s -> ArrayConstruction s
 write i e st = do a <- st
                   writeArray a i e
                   return a
+
 
 stepAL :: (T2,T2) -> [Int16] -> (T2, [Int16])
 stepAL ab = chainAL triangle O0        -- instead of undefined
