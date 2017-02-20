@@ -15,7 +15,20 @@ import Ternary.Core.Addition
 
 import Control.Arrow (second)
 
--- See explain.txt for a detailed explanation of the algorithm. 
+-- Step by step we shall construct an efficient algorithm for exact
+-- ternary multiplication.  Iteratively, we develop a series of fully
+-- functional multiplication algorithms, where each version becomes a
+-- stepping stone towards the next version.  The first iteration is
+-- derived from first principles.  Its implementation provides insight
+-- because it can be explained, examined and understood.  We call this
+-- the fine-structure algorithm, because all the internal details of
+-- the construction are explicitly modeled.  Subsequent versions build
+-- on previous versions, replacing inefficient data structures with
+-- more efficient ones.  These versions can only be explained in terms
+-- of their predecessors.  The final version will be about an order of
+-- magnitude more efficient in both time and space.
+
+-- See explain.txt for a detailed explanation of the basic algorithm.
 
 scalar :: T2 -> Kernel T2 T2 Sa
 scalar a = plus . multiplyT2 a
