@@ -60,19 +60,19 @@ chainAL f a (u:us) =
   in (c, v:vs)
 chainAL _ a [] = (a,[])
 
-
+-- The arrays going in and out are zero-indexed.
 chainAS :: forall s . UUAppliedTriangle -> T2 ->
            UArray Int Int16 -> (T2, ArrayConstruction s)
 chainAS f start old = (x,y)
   where
-    (#x,y#) = loop lo start new
-    (lo,hi) = bounds old
-    new = newArray_ (lo, hi+1)
+    (#x,y#) = loop 0 start new
+    hi = snd (bounds old)
+    new = newArray_ (0, hi+1)
     -- the inner loop needs an explicit type
     loop :: Int -> T2 -> ArrayConstruction s -> (# T2, ArrayConstruction s #)
     loop i x construction
       | i > hi = (# x, construction #)
-      | otherwise = let !u = unsafeAt old i
+      | otherwise = let !u = unsafeAt old i  -- assume zero-indexed array!
                         (# !b, !v #) = f x u
                         j = i+1  -- shift to the right
                     in loop j b (write j v construction)
@@ -88,9 +88,10 @@ stepAL :: (T2,T2) -> [Int16] -> (T2, [Int16])
 stepAL ab = chainAL triangle O0        -- instead of undefined
   where !triangle = lookupTriangle ab  -- important strictness
 
+-- The arrays going in an out are zero-indexed.
 stepAS :: (T2,T2) -> UArray Int Int16 -> (T2, ArrayConstruction s)
-stepAS ab = chainAS triangle O0        -- instead of undefined
-  where !triangle = lookupTriangle ab  -- important strictness
+stepAS ab = chainAS triangle O0
+  where !triangle = lookupTriangle ab
 
 
 newtype MulStateAL = MulStateAL [Int16]
