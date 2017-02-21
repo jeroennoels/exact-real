@@ -60,7 +60,11 @@ chainAL f a (u:us) =
   in (c, v:vs)
 chainAL _ a [] = (a,[])
 
--- The arrays going in and out are zero-indexed.
+-- The arrays going in and out are zero-indexed.  The new array has
+-- one more element than the old array, and the two arrays relate to
+-- each other by a shift: with the exclusion of position zero, the new
+-- array is completely populated.  Thus we anticipate the "final cons"
+-- that will set the initial state for the next round.
 chainAS :: forall s . UUAppliedTriangle -> T2 ->
            UArray Int Int16 -> (T2, ArrayConstruction s)
 chainAS f start old = (x,y)
@@ -116,13 +120,13 @@ multKernelAS ab (MulStateAS us) =
 instance MultiplicationState MulStateAL where
   kernel = multKernelAL
   initialMultiplicationState (TriangleParam a b) =
-    MulStateAL [lookupInitial (a,b)]
+    MulStateAL [lookupInitial (a,b)]  -- singleton list
 
 instance MultiplicationState MulStateAS where
   kernel = multKernelAS
   initialMultiplicationState (TriangleParam a b) =
     MulStateAS $ array (0,0) [(0,init)]
-    where init = lookupInitial (a,b)
+    where init = lookupInitial (a,b)  -- singleton array
 
 -- algorithm selector
 arrayLookup :: MulStateAL

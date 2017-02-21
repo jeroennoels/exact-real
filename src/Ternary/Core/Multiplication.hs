@@ -94,6 +94,8 @@ step ab ps = chained ab ps irrelevant
 
 data MulState s = MulState [TriangleParam] [s]
 
+-- Notice the "final cons" that adds an initial state to prepare for
+-- the next round of chained transitions.
 multKernel :: TriangleState s => Kernel (T2,T2) T2 (MulState s)
 multKernel ab (MulState ps us) =
   let (out, vs) = step ab ps us
