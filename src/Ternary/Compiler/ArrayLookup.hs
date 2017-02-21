@@ -83,7 +83,7 @@ appliedUniversalTriangle ab i =
   let (c,code) = splitIn i
   in mixOut $ universalTriangle (ab,c) code
 
--- make an array for every applied universal triangle
+-- Make a zero-indexed array for every applied universal triangle.
 toArray :: (T2,T2) -> UArray Int Int16
 toArray ab = array bounds $ toAssoc f domain
   where f :: Int -> Int16
@@ -91,21 +91,21 @@ toArray ab = array bounds $ toAssoc f domain
         bounds = verify (0,8926)
         domain = uncurry enumFromTo bounds
 
--- we use this to hash both triangle inputs and params
+-- We use this to hash both triangle inputs and params.
 hash :: (T2,T2) -> Int
 hash (a,b) = 5 * fromEnum a + fromEnum b
 
--- consistency check on the hash function
+-- Consistency check on the hash function.  The range is zero-indexed.
 hashRange = if map hash allT2T2 == [0..24]
             then (0,24)
             else error "ArrayLookup (hashRange)"
 
--- top level memoization
+-- top level memoization, using nothing but zero-indexed arrays
 memoTriangles :: Array Int (UArray Int Int16)
 memoTriangles = array hashRange assoc
   where assoc = map (hash &&& toArray) allT2T2
 
--- top level memoization
+-- top level memoization, using a zero-indexed array
 memoInitial :: UArray Int Int16
 memoInitial = array hashRange assoc
   where assoc = map (hash &&& init) allT2T2
