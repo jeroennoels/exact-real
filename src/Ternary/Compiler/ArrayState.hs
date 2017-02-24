@@ -122,6 +122,9 @@ instance MultiplicationState MulStateAL where
   initialMultiplicationState (TriangleParam a b) =
     MulStateAL [lookupInitial (a,b)]  -- singleton list
 
+-- The construction of a new state array is finished by setting a new
+-- initial state at the beginning of the chain.
+
 instance MultiplicationState MulStateAS where
   kernel = multKernelAS
   initialMultiplicationState (TriangleParam a b) =
