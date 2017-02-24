@@ -34,4 +34,4 @@ exhaustMultiplication :: Int -> IO ()
 exhaustMultiplication depth = assert desc (checkAllCombinations depth)
   where desc = "\nExhaust multiplication to depth " ++ show depth
 
-exhaustiveTest = warmup >> exhaustMultiplication 5
+exhaustiveTest = warmup >> exhaustMultiplication 4

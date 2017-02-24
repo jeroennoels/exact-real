@@ -108,12 +108,15 @@ multKernelAL ab (MulStateAL us) =
   in (out, MulStateAL (lookupInitial ab:vs))
 
 -- The construction of a new state array is finished by setting a new
--- initial state at the beginning of the chain.
+-- initial state at the beginning of the chain.  Strictness makes a
+-- noticeable difference on small multiplications, which is just as
+-- important as the asymptotic behavior.
 
 multKernelAS :: Kernel (T2,T2) T2 MulStateAS
 multKernelAS ab (MulStateAS us) =
-  let (out, construction) = stepAS ab us
-      finish = write 0 (lookupInitial ab) construction
+  let (!out, !construction) = stepAS ab us
+      !init = lookupInitial ab
+      finish = write 0 init construction
   in (out, MulStateAS (runSTUArray finish))
 
 
