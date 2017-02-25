@@ -2,12 +2,16 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE BangPatterns #-}
 
-module Ternary.Compiler.ArrayState (arrayLookup, arrayState) where
+module Ternary.Compiler.ArrayState (
+  MulStateAL(MulStateAL),
+  MulStateAS(MulStateAS),
+  arrayLookup, arrayState) where
 
 import Data.Array.Base (unsafeAt)
 import Data.Array.Unboxed
 import Data.Array.ST
 import Control.Monad.ST
+import GHC.Arr (inRange)
 import GHC.Int (Int16)
 
 import Ternary.Core.Digit (T2(..))
@@ -20,7 +24,9 @@ import Ternary.Core.Multiplication (
 
 -- notice the thin interface here
 import Ternary.Compiler.ArrayLookup (
-  mixIn, splitOut, lookupArray, lookupInitial)
+  mixIn, splitOut, lookupArray, lookupInitial,
+  -- the following we only need to assert an invariant
+  initialPoints, normalPointBounds, secondPointBounds)
 
 
 -- Unboxed universal applied triangle
@@ -88,8 +94,20 @@ write i e st = do a <- st
                   return a
 
 
+stepInvariant :: [Int16] -> Bool
+stepInvariant (u:v:vs) = elem u initialPoints &&
+                         inRange secondPointBounds v &&
+                         all (inRange normalPointBounds) vs
+stepInvariant [u] = elem u initialPoints
+
+checkStepInvariant :: [Int16] -> [Int16]
+checkStepInvariant us
+  | stepInvariant us = us
+  | otherwise = error "checkStepInvariant"
+
+
 stepAL :: (T2,T2) -> [Int16] -> (T2, [Int16])
-stepAL ab = chainAL triangle O0        -- instead of undefined
+stepAL ab = chainAL triangle O0 . checkStepInvariant  -- O0 instead of undefined
   where !triangle = lookupTriangle ab  -- important strictness
 
 -- The arrays going in an out are zero-indexed.
@@ -98,8 +116,8 @@ stepAS ab = chainAS triangle O0
   where !triangle = lookupTriangle ab
 
 
-newtype MulStateAL = MulStateAL [Int16]
-newtype MulStateAS = MulStateAS (UArray Int Int16)
+newtype MulStateAL = MulStateAL [Int16] deriving Show
+newtype MulStateAS = MulStateAS (UArray Int Int16) deriving Eq
 
 
 multKernelAL :: Kernel (T2,T2) T2 MulStateAL

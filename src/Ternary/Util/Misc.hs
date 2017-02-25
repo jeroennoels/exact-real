@@ -1,11 +1,11 @@
 module Ternary.Util.Misc where
 
 import Control.Monad (liftM2)
+import Data.Array.IArray (IArray, array)
 
 type Binop a = a -> a -> a
 
 {-# INLINE rangeCheck #-}
-
 rangeCheck :: Ord a => a -> a -> a -> a
 rangeCheck lo hi x
   | lo <= x && x <= hi = x
@@ -18,6 +18,10 @@ forceElements = foldr seq ()
 toAssoc :: (a -> b) -> [a] -> [(a,b)]
 toAssoc f = map graph
   where graph a = (a, f a)
+
+zeroIndexedArray :: IArray a e => [e] -> a Int e
+zeroIndexedArray elems = array (0,n) (zip [0..n] elems)
+  where n = length elems - 1
 
 cross :: [a] -> [b] -> [(a,b)]
 cross = liftM2 (,)

@@ -4,7 +4,8 @@
 
 module Ternary.Compiler.ArrayLookup (
   splitIn, splitOut, mixIn, mixOut,
-  warmup, lookupArray, lookupInitial) where
+  warmup, lookupArray, lookupInitial,
+  normalPointBounds, secondPointBounds, initialPoints) where
 
 import Control.Arrow ((&&&))
 import Data.Array.Base (unsafeAt)
@@ -27,7 +28,8 @@ import Ternary.Core.Multiplication (TriangleParam (TriangleParam))
 {-# INLINE splitIn #-}
 {-# INLINE splitOut #-}
 
--- runtime computation
+-- Runtime computation.  See Ternary.TestCompiler for details
+-- regarding the intended type of this function.
 mixIn :: T2 -> Int -> Int
 mixIn M2 i = i
 mixIn P2 i = i + 1540
@@ -39,13 +41,20 @@ mixIn P1 i = i + 6978
 -- points are represented by two adjacent integer ranges: respectively
 -- [0..1539] and [1540..1948] for normal and second step states.
 
+normalPointBounds, secondPointBounds :: Integral a => (a,a)
+normalPointBounds = (0,1539) 
+secondPointBounds = (1540,1948)
+
+-- compile-time consistency check on all these hard-coded numbers
 verifyMixIn (lo,hi) =
-  mixIn M2 0 == lo &&
-  mixIn P2 0 == mixIn M2 0 + 1540 &&    -- M2: only normal states
-  mixIn M1 0 == mixIn P2 0 + 1540 &&    -- P2: only normal states
-  mixIn O0 0 == mixIn M1 0 + 1949 &&    -- M1: all states
-  mixIn P1 0 == mixIn O0 0 + 1949 &&    -- O0: all states
-  mixIn P1 1948 == hi                   -- P1: all states
+  let n = snd normalPointBounds + 1
+      a = snd secondPointBounds + 1
+  in mixIn M2 (fst normalPointBounds) == lo &&
+     mixIn P2 0 == mixIn M2 0 + n &&         -- M2: only normal states
+     mixIn M1 0 == mixIn P2 0 + n &&         -- P2: only normal states
+     mixIn O0 0 == mixIn M1 0 + a &&         -- M1: all states
+     mixIn P1 0 == mixIn O0 0 + a &&         -- O0: all states
+     mixIn P1 (snd secondPointBounds) == hi  -- P1: all states
 
 -- compile-time verification
 verify :: (Int,Int) -> (Int,Int)
@@ -64,18 +73,21 @@ splitIn i
   | i < 8927 = (P1, wrap (i-6978))
   | otherwise = error "splitIn"
 
--- CodePoint wraps integers in the range [0..1948]
+-- CodePoint wraps integers in the range [0..1948].  For simplicity we
+-- choose a segmentation schema using multiples of 2000.  This means
+-- there are small gaps between segments, but this does not matter.
+
 -- This is a compile-time computation.
 mixOut :: (T2, CodePoint) -> Int16
-mixOut (a,code) = unwrap code + 2048 * fromIntegral (fromEnum a)
+mixOut (a,code) = unwrap code + 2000 * fromIntegral (fromEnum a)
 
 -- runtime computation, quotRem is slow
 splitOut :: Int16 -> (# T2, Int16 #)
-splitOut i | i < 2048 = (# M2, i #)
-splitOut i | i < 4096 = (# M1, i-2048 #)
-splitOut i | i < 6144 = (# O0, i-4096 #)
-splitOut i | i < 8192 = (# P1, i-6144 #)
-splitOut i            = (# P2, i-8192 #)
+splitOut i | i < 2000 = (# M2, i #)
+splitOut i | i < 4000 = (# M1, i-2000 #)
+splitOut i | i < 6000 = (# O0, i-4000 #)
+splitOut i | i < 8000 = (# P1, i-6000 #)
+splitOut i            = (# P2, i-8000 #)
 
 
 appliedUniversalTriangle :: (T2,T2) -> Int -> Int16
@@ -121,7 +133,11 @@ lookupArray = unsafeAt memoTriangles . hash
 lookupInitial :: (T2,T2) -> Int16
 lookupInitial = unsafeAt memoInitial . hash
 
+initialPoints :: [Int16]
+initialPoints = elems memoInitial
+
 warmup :: IO ()
 warmup = return $! forceElements samples
   where samples :: [Int16]
-        samples = elems memoInitial ++ map (!0) (elems memoTriangles)
+        samples = initialPoints ++ map (!0) (elems memoTriangles)
+

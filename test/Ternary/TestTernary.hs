@@ -1,20 +1,25 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 
-module Ternary.TestTernary (blackBoxTest, coreTest, fastTest) where
+module Ternary.TestTernary where
 
 import Ternary.Core.Digit
+import Ternary.Core.Multiplication (MultiplicationState(kernel))
+
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum ()
 import Ternary.List.Aux (selfList, scalarFiniteExact)
 import Ternary.QuickCheckUtil (quickSuite)
-import Ternary.Util.Misc (Binop, eq3)
+import Ternary.Util.Misc (Binop, eq3, zeroIndexedArray)
 import Ternary.Util.Triad (Triad, makeTriad)
 import Ternary.Fiddle
 import Ternary.TestKernel (qcChain)
+import Ternary.Compiler.ArrayState (MulStateAL(..), MulStateAS(..))
+import Ternary.Compiler.ArrayLookup (
+  initialPoints, normalPointBounds, secondPointBounds)
 
-import Control.Monad (liftM, liftM2)
-import Control.Arrow (first)
+import Control.Monad (liftM, liftM2, liftM3)
+import Control.Arrow (first, second)
 import Data.Monoid (Sum(Sum), Product(Product))
 
 import Test.QuickCheck
@@ -47,6 +52,13 @@ instance Arbitrary FiniteExact where
     where construct as p = unsafeFinite (Exact as p)
           exponent = fmap getNonNegative arbitrary
 
+instance Arbitrary MulStateAL where
+  arbitrary = liftM3 combine i s n
+    where combine a b cs = MulStateAL (a:b:cs)
+          i = elements initialPoints 
+          s = choose secondPointBounds
+          n = listOf (choose normalPointBounds)
+    
 instance EqProp FiniteExact where (=-=) = eq
 
 instance EqProp Triad where (=-=) = eq
@@ -117,6 +129,14 @@ qcSelf u v w = take 3 (selfList P1 P2 inp) == out
   where inp = [u, embedT1 v, w]
         out = [P1, addT1 M v, w]
 
+qcArrayLookupVersusArrayState :: (T2,T2) -> MulStateAL -> Bool
+qcArrayLookupVersusArrayState input state =
+  second toArrayState (kernel input state) == kernel input (toArrayState state)
+  
+toArrayState :: MulStateAL -> MulStateAS
+toArrayState (MulStateAL us) = MulStateAS (zeroIndexedArray us)
+
+
 -- Monoid selector
 triad :: Triad
 triad = undefined
@@ -162,7 +182,9 @@ alternativeTests =
     ("Integer multiplication 3",
      property $ qcIntegerMultiplication multiplyAltAL),
     ("Integer multiplication 4",
-     property $ qcIntegerMultiplication multiplyAltAS)])
+     property $ qcIntegerMultiplication multiplyAltAS),
+    ("ArrayLookup versus ArrayState",
+     property $ qcArrayLookupVersusArrayState)])
 
 miscUnitTest :: TestBatch
 miscUnitTest = 
