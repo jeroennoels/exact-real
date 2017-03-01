@@ -97,11 +97,10 @@ appliedUniversalTriangle ab i =
 
 -- Make a zero-indexed array for every applied universal triangle.
 toArray :: (T2,T2) -> UArray Int Int16
-toArray ab = array bounds $ toAssoc f domain
+toArray ab = array bounds $ toAssoc f (range bounds)
   where f :: Int -> Int16
         f = appliedUniversalTriangle ab
         bounds = verify (0,8926)
-        domain = uncurry enumFromTo bounds
 
 -- We use this to hash both triangle inputs and params.
 hash :: (T2,T2) -> Int
