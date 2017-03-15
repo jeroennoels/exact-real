@@ -41,7 +41,8 @@ extreme depth = expression assoc
   where pair i = (i+1, Plus i i)
         assoc = (0,Id) : map pair [0..depth]
 
--- Scan the map in ascending key order
+-- Scan the map in ascending key order.  Build a new map with exactly
+-- the same domain.
 mapScanL :: Ord k => (Map k b -> a -> b) -> Map k a -> Map k b
 mapScanL f = foldlWithKey' op empty
   where op m k a = insert k (f m a) m
@@ -132,3 +133,5 @@ exhausted (ref, child) (Consumed leg n) = ref == leg && length produced == n
 
 activeNodesExample :: Int -> [Ref]
 activeNodesExample = map fst . activeNodes . initCalc . extreme 
+
+-- sample $ arbitraryExpression 100

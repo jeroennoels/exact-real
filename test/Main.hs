@@ -7,6 +7,7 @@ import Ternary.Performance (performanceTest)
 import Ternary.Exhaust (exhaustiveTest, exhaustMultiplication)
 import Ternary.TestCompiler (compilerTest)
 import Ternary.Examples ()
+import Ternary.TestExpression
 
 main = getArgs >>= run >> putStrLn ""
 

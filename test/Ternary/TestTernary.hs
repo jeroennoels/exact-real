@@ -10,6 +10,7 @@ import Ternary.List.FiniteExact
 import Ternary.List.FiniteExactNum ()
 import Ternary.List.Aux (selfList, scalarFiniteExact)
 import Ternary.QuickCheckUtil (quickSuite)
+import Ternary.Arbitraries
 import Ternary.Util.Misc (Binop, eq3, zeroIndexedArray)
 import Ternary.Util.Triad (Triad, makeTriad)
 import Ternary.Fiddle
@@ -27,18 +28,6 @@ import Test.QuickCheck.Checkers hiding (Binop)
 import Test.QuickCheck.Utils (isCommutable)
 import Test.QuickCheck.Classes (semanticMonoid, semanticOrd)
 
-instance Arbitrary T1 where
-  arbitrary = elements [M, O, P]
-
-instance Arbitrary T2 where
-  arbitrary = elements allT2
-
-instance Arbitrary T4 where
-  arbitrary = elements [Ma4, Ma3, Ma2, Ma1, Oa0, Pa1, Pa2, Pa3, Pa4]
-
-instance Arbitrary Triad where
-  arbitrary = liftM2 makeTriad arbitrary exponent
-    where exponent = fmap getNonNegative arbitrary
 
 instance Arbitrary a => Arbitrary (Sum a) where
   arbitrary = liftM Sum arbitrary
