@@ -3,6 +3,7 @@
 module Ternary.Sampling.Expression where
 
 import Data.Maybe
+import Control.Monad
 import Data.Map.Strict (Map, insert, empty, fromList,
                         foldlWithKey', foldrWithKey',
                         intersectionWith, (!))
@@ -97,6 +98,9 @@ data NodeCalc = IdCalc Out | PlusCalc Consumed Consumed Sa Out
 data Calculation = Calc Ref (Map Ref NodeCalc)
                  deriving Show
 
+transform :: (Map Ref NodeCalc -> Map Ref NodeCalc) -> Calculation -> Calculation
+transform f (Calc root nodes) = Calc root (f nodes) 
+
 nodeOutput :: NodeCalc -> Out
 nodeOutput (PlusCalc _ _ _ out) = out
 nodeOutput (IdCalc out) = out
@@ -143,6 +147,7 @@ strictlyIncreasing :: [(Ref, NodeCalc)] -> Bool
 strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
   where refs = map fst list
 
+-- Assume the node is ready
 consume :: Map Ref NodeCalc -> Consumed -> (T2, Consumed)
 consume nodes (Consumed a p) = (d, Consumed a (p+1))
   where Out (d:_) = nodeOutput (nodes!a)
@@ -154,4 +159,18 @@ refine nodes (PlusCalc a1 a2 old (Out ds)) =
   where (d1,c1) = consume nodes a1
         (d2,c2) = consume nodes a2
         (d,new) = plus (addT2 d1 d2) old
+
+update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Maybe (Map Ref NodeCalc)
+update acc (ref,node) = flip (insert ref) acc `fmap` refine acc node
+
+refineCalculation :: Calculation -> Maybe Calculation
+refineCalculation calc@(Calc root nodes) =
+  Calc root `fmap` foldM update nodes (activeNodes calc)
+
+input :: T2 -> NodeCalc -> NodeCalc
+input d (IdCalc (Out ds)) = IdCalc (Out (d:ds))
+input _ node = node
+
+refineInput :: T2 -> Calculation -> Calculation
+refineInput = transform . Map.map . input
 
