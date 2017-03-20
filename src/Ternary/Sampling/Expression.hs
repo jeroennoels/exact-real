@@ -2,6 +2,7 @@
 
 module Ternary.Sampling.Expression where
 
+import Data.Maybe
 import Data.Map.Strict (Map, insert, empty, fromList,
                         foldlWithKey', foldrWithKey',
                         intersectionWith, (!))
@@ -38,7 +39,7 @@ example = expression [(0, Id),
 -- A small graph can represent a big tree.  Beware the fibonacci trap!
 extreme :: Int -> Expr
 extreme depth = expression assoc      
-  where pair i = (i+1, Plus i i)
+  where pair ref = (ref+1, Plus ref ref)
         assoc = (0,Id) : map pair [0..depth]
 
 -- Scan the map in ascending key order.  Build a new map with exactly
@@ -85,12 +86,13 @@ toShifts = mapScanL shift
   where shift m (Plus a b) = shiftPlus (m!a) (m!b)
         shift _ Id = NoShift
 
-newtype Out = Out [T2] deriving Show
 
-data Consumed = Consumed Ref Int deriving Show
+newtype Out = Out [T2] deriving (Show, Eq)
+
+data Consumed = Consumed Ref Int deriving (Show, Eq)
 
 data NodeCalc = IdCalc Out | PlusCalc Consumed Consumed Sa Out
-              deriving Show
+              deriving (Show, Eq)
 
 data Calculation = Calc Ref (Map Ref NodeCalc)
                  deriving Show
@@ -114,13 +116,16 @@ initCalc :: Expr -> Calculation
 initCalc (Expr root nodes) =
   Calc root $ intersectionWith initNodeCalc nodes (toShifts nodes)
 
--- Currently all nodes are always active
+-- Currently all reachable nodes are active
 activeNodes :: Calculation -> [(Ref, NodeCalc)]
 activeNodes (Calc root nodes) =
-  foldrWithKey' (curry accumulateActive) [(root,nodes!root)] nodes
+  foldrWithKey' (curry accumulateActive) init unrooted
+  where init = [(root, nodes!root)]  -- include these in the Calculation type?
+        unrooted = Map.delete root nodes 
 
 accumulateActive :: (Ref, NodeCalc) -> [(Ref, NodeCalc)] -> [(Ref, NodeCalc)]
-accumulateActive cand acc = if any activated acc then cand:acc else acc
+accumulateActive cand acc =
+  if any activated acc then cand:acc else acc
   where activated = activatedBy cand . snd
         
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
@@ -134,4 +139,19 @@ exhausted (ref, child) (Consumed leg n) = ref == leg && length produced == n
 activeNodesExample :: Int -> [Ref]
 activeNodesExample = map fst . activeNodes . initCalc . extreme 
 
--- sample $ arbitraryExpression 100
+strictlyIncreasing :: [(Ref, NodeCalc)] -> Bool
+strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
+  where refs = map fst list
+
+consume :: Map Ref NodeCalc -> Consumed -> (T2, Consumed)
+consume nodes (Consumed a p) = (d, Consumed a (p+1))
+  where Out (d:_) = nodeOutput (nodes!a)
+        
+refine :: Map Ref NodeCalc -> NodeCalc -> Maybe NodeCalc
+refine _ (IdCalc _) = Nothing  -- new input is needed to refine an Id node
+refine nodes (PlusCalc a1 a2 old (Out ds)) =
+  Just $ PlusCalc c1 c2 new (Out (d:ds))
+  where (d1,c1) = consume nodes a1
+        (d2,c2) = consume nodes a2
+        (d,new) = plus (addT2 d1 d2) old
+
