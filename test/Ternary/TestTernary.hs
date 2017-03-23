@@ -35,12 +35,6 @@ instance Arbitrary a => Arbitrary (Sum a) where
 instance Arbitrary a => Arbitrary (Product a) where
   arbitrary = liftM Product arbitrary
 
--- safe because arbitrary lists are always finite
-instance Arbitrary FiniteExact where
-  arbitrary = liftM2 construct arbitrary exponent
-    where construct as p = unsafeFinite (Exact as p)
-          exponent = fmap getNonNegative arbitrary
-
 instance Arbitrary MulStateAL where
   arbitrary = liftM3 combine i s n
     where combine a b cs = MulStateAL (a:b:cs)

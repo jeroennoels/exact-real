@@ -6,6 +6,8 @@ import Control.Monad (liftM2)
 
 import Ternary.Core.Digit
 import Ternary.Util.Triad (Triad, makeTriad)
+import Ternary.List.Exact (Exact(Exact))
+import Ternary.List.FiniteExact (FiniteExact, unsafeFinite)
 
 
 instance Arbitrary T1 where
@@ -20,3 +22,9 @@ instance Arbitrary T4 where
 instance Arbitrary Triad where
   arbitrary = liftM2 makeTriad arbitrary exponent
     where exponent = fmap getNonNegative arbitrary
+
+-- safe because arbitrary lists are always finite
+instance Arbitrary FiniteExact where
+  arbitrary = liftM2 construct arbitrary exponent
+    where construct as p = unsafeFinite (Exact as p)
+          exponent = fmap getNonNegative arbitrary

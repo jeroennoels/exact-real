@@ -3,7 +3,7 @@ module Ternary.List.FiniteExact (
   offset, shift, takeFinite, integralPart,
   infiniteExact, finiteLength, unwrapFinite, unsafeFinite,
   unsafeApplyFinite, unsafeLift, truncateLift,
-  triadToFiniteExact, finiteExactToTriad,
+  triadToFiniteExact, finiteExactToTriad, phi,
   finitizeAdd, finitizeMult,
   multiplyAltFS, multiplyAltIE, multiplyAltAL, multiplyAltAS) where
 

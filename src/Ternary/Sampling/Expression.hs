@@ -37,6 +37,9 @@ example = expression [(0, Id),
                       (2, Plus 1 1),
                       (3, Plus 2 1)]
 
+maxHeight :: Expr -> Int
+maxHeight (Expr _ nodes) = Map.size nodes
+
 -- A small graph can represent a big tree.  Beware the fibonacci trap!
 extreme :: Int -> Expr
 extreme depth = expression assoc      
@@ -147,10 +150,14 @@ strictlyIncreasing :: [(Ref, NodeCalc)] -> Bool
 strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
   where refs = map fst list
 
--- Assume the node is ready
+-- Precondition: the length of the output is greater than the number
+-- that is already consumed
 consume :: Map Ref NodeCalc -> Consumed -> (T2, Consumed)
-consume nodes (Consumed a p) = (d, Consumed a (p+1))
-  where Out (d:_) = nodeOutput (nodes!a)
+consume nodes (Consumed a p) = (result, Consumed a (p+1))
+  where result = if p < 0 then O0 else ds !! idx
+        Out ds = nodeOutput (nodes!a)
+        idx = length ds - 1 - p
+        
         
 refine :: Map Ref NodeCalc -> NodeCalc -> Maybe NodeCalc
 refine _ (IdCalc _) = Nothing  -- new input is needed to refine an Id node
@@ -167,10 +174,27 @@ refineCalculation :: Calculation -> Maybe Calculation
 refineCalculation calc@(Calc root nodes) =
   Calc root `fmap` foldM update nodes (activeNodes calc)
 
-input :: T2 -> NodeCalc -> NodeCalc
-input d (IdCalc (Out ds)) = IdCalc (Out (d:ds))
-input _ node = node
+nodeInput :: T2 -> NodeCalc -> NodeCalc
+nodeInput d (IdCalc (Out ds)) = IdCalc (Out (d:ds))
+nodeInput _ node = node
 
 refineInput :: T2 -> Calculation -> Calculation
-refineInput = transform . Map.map . input
+refineInput = transform . Map.map . nodeInput
 
+output :: Calculation -> [T2]
+output (Calc root nodes) = reverse ds
+  where Out ds = nodeOutput (nodes!root)
+
+rootOffset :: Integral i => Expr -> i
+rootOffset (Expr root nodes) = offset (toShifts nodes ! root)
+
+-- Quick and dirty eval function to get first QuickCheck feedback.
+-- To be improved later.
+evalFinite :: Expr -> [T2] -> [T2]
+evalFinite expr as = recurse (initCalc expr) as
+  where recurse calc [] = output calc
+        recurse calc input@(a:as) =
+          let refined = refineCalculation calc
+          in if isNothing refined
+             then recurse (refineInput a calc) as 
+             else recurse (fromJust refined) input

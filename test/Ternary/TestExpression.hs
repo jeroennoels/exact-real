@@ -6,7 +6,11 @@ import Control.Monad (liftM, liftM2, sequence)
 
 import Ternary.Core.Digit
 import Ternary.Arbitraries
+import Ternary.Util.Triad
+import Ternary.List.Exact
+import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
+
 
 arbitraryNode :: Int -> Gen Node
 arbitraryNode n = liftM2 Plus below below
@@ -63,5 +67,12 @@ expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
     ("Active nodes 1", property qcActiveNodesPrune),
-    ("Active nodes 2", property qcActiveNodesBottomUp)])
-  
+    ("Active nodes 2", property qcActiveNodesBottomUp),
+    ("Finite evaluation", property qcEval)])
+
+qcEval :: Expr -> [T2] -> Bool
+qcEval expr as = direct == finiteExactToTriad (unsafeFinite result)
+  where direct = smartEval expr (phi as)
+        result = Exact (evalFinite expr bs) p
+        bs = as ++ replicate (maxHeight expr) O0
+        p = rootOffset expr
