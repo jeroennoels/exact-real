@@ -61,7 +61,7 @@ qcActiveNodesPrune (Prune x y) =
   activeNodes (initCalc x) == activeNodes (initCalc y)
 
 qcActiveNodesBottomUp :: Expr -> Bool
-qcActiveNodesBottomUp = strictlyIncreasing . activeNodes . initCalc 
+qcActiveNodesBottomUp = strictlyIncreasing . getOthers . activeNodes . initCalc 
                        
 expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",

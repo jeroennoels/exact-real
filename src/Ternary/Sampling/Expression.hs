@@ -3,6 +3,7 @@
 module Ternary.Sampling.Expression where
 
 import Data.Maybe
+import Data.List (foldl')
 import Control.Monad
 import Data.Map.Strict (Map, insert, empty, fromList,
                         foldlWithKey', foldrWithKey',
@@ -123,16 +124,40 @@ initCalc :: Expr -> Calculation
 initCalc (Expr root nodes) =
   Calc root $ intersectionWith initNodeCalc nodes (toShifts nodes)
 
-activeNodes :: Calculation -> [(Ref, NodeCalc)]
-activeNodes (Calc root nodes) =
-  foldrWithKey' (curry accumulateActive) init unrooted
-  where init = [(root, nodes!root)]  -- include these in the Calculation type?
-        unrooted = Map.delete root nodes 
+data Actives = Actives [(Ref, NodeCalc)] [(Ref, NodeCalc)]
+             deriving (Show, Eq)
 
-accumulateActive :: (Ref, NodeCalc) -> [(Ref, NodeCalc)] -> [(Ref, NodeCalc)]
+getInputs :: Actives -> [(Ref, NodeCalc)]
+getInputs (Actives inputs _) = inputs
+
+getOthers :: Actives -> [(Ref, NodeCalc)]
+getOthers (Actives _ others) = others
+
+isInput :: (Ref, NodeCalc) -> Bool
+isInput (_, IdCalc _) = True
+isInput _ = False
+
+consActive :: (Ref, NodeCalc) -> Actives -> Actives
+consActive node (Actives inputs others)
+  | isInput node = Actives (node:inputs) others
+  | otherwise = Actives inputs (node:others)
+
+-- Include this in the Calculation type?
+activesRoot :: Calculation -> Actives
+activesRoot (Calc root nodes) = consActive (root, nodes!root) (Actives [] [])
+
+activeNodes :: Calculation -> Actives
+activeNodes calc@(Calc root nodes) =
+  foldrWithKey' (curry accumulateActive) (activesRoot calc) unrooted
+  where unrooted = Map.delete root nodes 
+
+accumulateActive :: (Ref, NodeCalc) -> Actives -> Actives
 accumulateActive cand acc =
-  if any activated acc then cand:acc else acc
+  if activesAny activated acc then consActive cand acc else acc
   where activated = activatedBy cand . snd
+
+activesAny :: ((Ref, NodeCalc) -> Bool) -> Actives -> Bool
+activesAny p (Actives inputs others) = any p inputs || any p others
         
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
 child `activatedBy` PlusCalc a b _ _ = exhausted child a || exhausted child b
@@ -142,8 +167,8 @@ exhausted :: (Ref, NodeCalc) -> Consumed -> Bool
 exhausted (ref, child) (Consumed leg n) = ref == leg && length produced == n
   where Out produced = nodeOutput child
 
-activeNodesExample :: Int -> [Ref]
-activeNodesExample = map fst . activeNodes . initCalc . extreme 
+activeNodesExample :: Int -> Actives
+activeNodesExample = activeNodes . initCalc . extreme 
 
 strictlyIncreasing :: [(Ref, NodeCalc)] -> Bool
 strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
@@ -158,25 +183,32 @@ consume nodes (Consumed a p) = (result, Consumed a (p+1))
         idx = length ds - 1 - p
         
         
-refine :: Map Ref NodeCalc -> NodeCalc -> Maybe NodeCalc
-refine _ (IdCalc _) = Nothing  -- new input is needed to refine an Id node
+refine :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
+refine _ (IdCalc _) = error "New input is needed to refine an Id node"
 refine nodes (PlusCalc a1 a2 old (Out ds)) =
-  Just $ PlusCalc c1 c2 new (Out (d:ds))
+  d `seq` PlusCalc c1 c2 new (Out (d:ds))
   where (d1,c1) = consume nodes a1
         (d2,c2) = consume nodes a2
         (d,new) = plus (addT2 d1 d2) old
 
-update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Maybe (Map Ref NodeCalc)
-update acc (ref,node) = flip (insert ref) acc `fmap` refine acc node
+update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
+update acc (ref,node) = flip (insert ref) acc (refine acc node)
 
+-- We refine active nodes from leaf to root.  This means we fail fast
+-- when more input is needed, because input nodes are normally at the
+-- bottom.
 refineCalculation :: Calculation -> Maybe Calculation
 refineCalculation calc@(Calc root nodes) =
-  Calc root `fmap` foldM update nodes (activeNodes calc)
+  let Actives inputs others = activeNodes calc      
+  in if null inputs
+     then Just $ Calc root (foldl' update nodes others)
+     else Nothing
 
 nodeInput :: T2 -> NodeCalc -> NodeCalc
 nodeInput d (IdCalc (Out ds)) = IdCalc (Out (d:ds))
 nodeInput _ node = node
 
+-- TODO this is not efficient because the whole map is replaced.
 refineInput :: T2 -> Calculation -> Calculation
 refineInput = transform . Map.map . nodeInput
 
