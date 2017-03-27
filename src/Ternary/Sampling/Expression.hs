@@ -123,7 +123,6 @@ initCalc :: Expr -> Calculation
 initCalc (Expr root nodes) =
   Calc root $ intersectionWith initNodeCalc nodes (toShifts nodes)
 
--- Currently all reachable nodes are active
 activeNodes :: Calculation -> [(Ref, NodeCalc)]
 activeNodes (Calc root nodes) =
   foldrWithKey' (curry accumulateActive) init unrooted

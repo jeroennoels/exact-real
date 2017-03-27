@@ -15,6 +15,9 @@ rangeCheck lo hi x
 forceElements :: [a] -> ()
 forceElements = foldr seq ()
 
+forceElementsIO :: [a] -> IO ()
+forceElementsIO = (return $!) . forceElements 
+
 toAssoc :: (a -> b) -> [a] -> [(a,b)]
 toAssoc f = map graph
   where graph a = (a, f a)

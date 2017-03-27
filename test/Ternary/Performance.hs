@@ -1,13 +1,16 @@
-module Ternary.Performance (performanceTest) where
+module Ternary.Performance (
+  performanceTest, evalPerformance) where
 
 import System.TimeIt
 
 import Ternary.Core.Digit (T2(..))
-import Ternary.Util.Misc (forceElements)
+import Ternary.Util.Misc (forceElements, forceElementsIO)
 import Ternary.List.Exact
 import Ternary.List.ExactNum ()
 import Ternary.Compiler.ArrayLookup (warmup)
+import Ternary.Sampling.Expression
 import Ternary.QuickCheckUtil (randomsR)
+
 
 randomT2s :: Int -> [T2]
 randomT2s seed = map toEnum (randomsR seed (0,4))
@@ -26,16 +29,29 @@ force :: Int -> Exact -> IO ()
 force n = (return $!) . forceElements . take n . streamDigits
 
 timeMultiplication :: Int -> Exact -> Exact -> IO ()
-timeMultiplication n x y =
-     force (n+2) x
-  >> force (n+2) y
-  >> putStr "  Array Lookup  "
-  >> time multiplyAltAL
-  >> putStr "  Array State   "
-  >> time multiplyAltAS
-  where time (**) = timeIt $ force n (x ** y)
+timeMultiplication n x y = do
+  force (n+2) x
+  force (n+2) y
+  putStr "  Array Lookup  "
+  time multiplyAltAL
+  putStr "  Array State   "
+  time multiplyAltAS
+  where
+    time (**) = timeIt $ force n (x ** y)
 
-performanceTest =
+performanceTest = do
   putStrLn "\nPerformance:"
-  >> assertWarm
-  >> timeMultiplication 6000 (randomExact 0) (randomExact 1)
+  assertWarm
+  timeMultiplication 6000 (randomExact 0) (randomExact 1)
+
+
+timeExpressionEval :: Expr -> [T2] -> IO ()
+timeExpressionEval expr as = do
+  forceElementsIO as
+  len <- time (evalFinite expr as)
+  time (take len (streamDigits $ smartEval expr (Exact as 0)))
+  putStrLn ("Number of output digits = " ++ show len)
+  where
+    time list = timeIt (forceElementsIO list >> return (length list))
+    
+evalPerformance = timeExpressionEval (extreme 20000) (take 5 $ randomT2s 0)
