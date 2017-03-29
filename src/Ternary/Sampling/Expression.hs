@@ -2,7 +2,7 @@
 
 module Ternary.Sampling.Expression where
 
-import Data.Maybe
+import Data.Either
 import Data.List (foldl')
 import Control.Monad
 import Data.Map.Strict (Map, insert, empty, fromList,
@@ -182,50 +182,69 @@ consume nodes (Consumed a p) = (result, Consumed a (p+1))
         Out ds = nodeOutput (nodes!a)
         idx = length ds - 1 - p
         
-        
-refine :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
-refine _ (IdCalc _) = error "New input is needed to refine an Id node"
-refine nodes (PlusCalc a1 a2 old (Out ds)) =
+-- Precondition: the given node is not an input node
+refineNode :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
+refineNode _ (IdCalc _) = error "New input is needed to refine an Id node"
+refineNode nodes (PlusCalc a1 a2 old (Out ds)) =
   d `seq` PlusCalc c1 c2 new (Out (d:ds))
   where (d1,c1) = consume nodes a1
         (d2,c2) = consume nodes a2
         (d,new) = plus (addT2 d1 d2) old
 
 update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
-update acc (ref,node) = flip (insert ref) acc (refine acc node)
+update acc (ref,node) = flip (insert ref) acc (refineNode acc node)
 
--- We refine active nodes from leaf to root.  This means we fail fast
--- when more input is needed, because input nodes are normally at the
--- bottom.
-refineCalculation :: Calculation -> Maybe Calculation
-refineCalculation calc@(Calc root nodes) =
-  let Actives inputs others = activeNodes calc      
-  in if null inputs
-     then Just $ Calc root (foldl' update nodes others)
-     else Nothing
+refineCalculation :: Actives -> Calculation -> Calculation
+refineCalculation (Actives inputs others) calc@(Calc root nodes)
+  | null inputs = Calc root (foldl' update nodes others)
+  | otherwise = error "refineCalculation: active inputs"
+
+newtype Refinement = Refined Calculation
+data NeedsInput = NeedsInput Calculation Actives
+data Continue = Continue Calculation [(Ref, NodeCalc)] 
+                  
+refine :: Refinement -> Either Refinement NeedsInput
+refine (Refined calc)
+  | null inputs = Left $ Refined (refineCalculation actives calc)
+  | otherwise =  Right $ NeedsInput calc actives
+  where actives@(Actives inputs _) = activeNodes calc
+
+continue :: Continue -> Refinement
+continue (Continue calc others) =
+  Refined (refineCalculation (Actives [] others) calc)
+
+provideInput :: T2 -> NeedsInput -> Continue
+provideInput d (NeedsInput calc (Actives [input] others)) =
+  Continue (refineInput d input calc) others
 
 nodeInput :: T2 -> NodeCalc -> NodeCalc
 nodeInput d (IdCalc (Out ds)) = IdCalc (Out (d:ds))
-nodeInput _ node = node
 
--- TODO this is not efficient because the whole map is replaced.
-refineInput :: T2 -> Calculation -> Calculation
-refineInput = transform . Map.map . nodeInput
+refineInput :: T2 -> (Ref, NodeCalc) -> Calculation -> Calculation
+refineInput d (ref, node) = transform $ insert ref (nodeInput d node)
 
-output :: Calculation -> [T2]
-output (Calc root nodes) = reverse ds
+output :: Refinement -> [T2]
+output (Refined (Calc root nodes)) = reverse ds
   where Out ds = nodeOutput (nodes!root)
 
+-- TODO avoid computing this a second time
 rootOffset :: Integral i => Expr -> i
 rootOffset (Expr root nodes) = offset (toShifts nodes ! root)
 
--- Quick and dirty eval function to get first QuickCheck feedback.
--- To be improved later.
 evalFinite :: Expr -> [T2] -> [T2]
-evalFinite expr as = recurse (initCalc expr) as
-  where recurse calc [] = output calc
-        recurse calc input@(a:as) =
-          let refined = refineCalculation calc
-          in if isNothing refined
-             then recurse (refineInput a calc) as 
-             else recurse (fromJust refined) input
+evalFinite expr as = recurse (Refined (initCalc expr)) as
+  where recurse refinement [] = output refinement
+        recurse refinement input@(a:as) =
+          let attempt = refine refinement
+              done = either id (continue . provideInput a) attempt
+          in recurse done (if isLeft attempt then input else as)
+
+sample :: Expr -> Int -> [[T2]]
+sample expr depth = recurse (Refined (initCalc expr)) depth []
+  where recurse refinement 0 acc = output refinement : acc
+        recurse refinement depth acc =
+          let Right needsInput = refine refinement
+              go a state = let done = continue (provideInput a needsInput)
+                           in recurse done (depth-1) state
+          in go M1 $ go O0 $ go P1 acc
+              
