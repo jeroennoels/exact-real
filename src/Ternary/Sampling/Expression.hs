@@ -13,7 +13,10 @@ import qualified Data.Map.Strict as Map
 import Ternary.Core.Digit
 import Ternary.Core.Addition
 
+
+-- TODO consider newtype with Integral and Show instances.
 type Ref = Int
+
 data Node = Id | Plus Ref Ref deriving Show
 data Expr = Expr Ref (Map Ref Node) deriving Show
 
@@ -124,6 +127,7 @@ initCalc :: Expr -> Calculation
 initCalc (Expr root nodes) =
   Calc root $ intersectionWith initNodeCalc nodes (toShifts nodes)
 
+-- TODO Consider record syntax and improve encapsulation.
 data Actives = Actives [(Ref, NodeCalc)] [(Ref, NodeCalc)]
              deriving (Show, Eq)
 
