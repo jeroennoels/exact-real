@@ -22,7 +22,12 @@ arbitraryRefNode n = return n `pairM` arbitraryNode n
    
 arbitraryRefNodes :: Int -> Gen [(Ref,Node)]
 arbitraryRefNodes n = sequence $ leaf : map arbitraryRefNode [1..n]
-  where leaf = return (0,Id)
+  where leaf = return (0, Id varX)
+
+arbitraryRefNodes2 :: Int -> Gen [(Ref,Node)]
+arbitraryRefNodes2 n = sequence $ leafX : leafY : map arbitraryRefNode [2..n]
+  where leafX = return (0, Id varX)
+        leafY = return (1, Id varY)
 
 -- The list is traversed backwards (top-down) to accumulate all nodes
 -- that are directly or indirectly referenced by the root node.
@@ -36,7 +41,7 @@ pruneList list = recurse backwards [root]
 
 references :: Ref -> (Ref,Node) -> Bool
 references ref (_, Plus a b) = ref == a || ref == b
-references ref (_, Id) = False
+references ref (_, Id _) = False
                          
 -- Combine an expression and its pruned equivalent
 data Prune = Prune Expr Expr deriving Show
@@ -54,7 +59,7 @@ instance Arbitrary Expr where
   arbitrary = liftM prunedExpr arbitrary
 
 qcEvaluate :: Prune -> Bool
-qcEvaluate (Prune x y) = smartEval x 1 == smartEval y 1
+qcEvaluate (Prune x y) = smartEval x xBind1 == smartEval y xBind1
 
 qcActiveNodesPrune :: Prune -> Bool
 qcActiveNodesPrune (Prune x y) =
@@ -68,11 +73,30 @@ expressionTest = quickBatch $
    [("Evaluation", property qcEvaluate),
     ("Active nodes 1", property qcActiveNodesPrune),
     ("Active nodes 2", property qcActiveNodesBottomUp),
-    ("Finite evaluation", property qcEval)])
+    ("Finite evaluation", property qcEval2)])
 
 qcEval :: Expr -> [T2] -> Bool
 qcEval expr as = direct == finiteExactToTriad (unsafeFinite result)
-  where direct = smartEval expr (phi as)
+  where direct = smartEval expr binding
+        binding = unsafeBind [(varX, phi as)]
         result = Exact (evalFinite expr bs) p
         bs = as ++ replicate (maxHeight expr) O0
+        p = rootOffset expr
+
+
+data Prune2 = Prune2 Expr Expr deriving Show
+
+prune2 :: [(Ref,Node)] -> Prune2
+prune2 list = expression list `Prune2` expression (pruneList list)
+                  
+instance Arbitrary Prune2 where 
+  arbitrary = prune2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
+
+qcEval2 :: Prune2 -> [T2] -> [T2] -> Bool
+qcEval2 (Prune2 _ expr) as bs = direct == finiteExactToTriad (unsafeFinite result)
+  where direct = smartEval expr binding
+        binding = unsafeBind [(varX, phi as), (varY, phi bs)]
+        result = Exact (evalFinite2 expr as' bs') p
+        as' = as ++ replicate (length bs + maxHeight expr) O0
+        bs' = bs ++ replicate (length as + maxHeight expr) O0
         p = rootOffset expr
