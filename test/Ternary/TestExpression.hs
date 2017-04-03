@@ -10,7 +10,7 @@ import Ternary.Util.Triad
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
-
+import Ternary.Sampling.Calculation
 
 arbitraryNode :: Int -> Gen Node
 arbitraryNode n = liftM2 Plus below below

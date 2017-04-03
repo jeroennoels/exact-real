@@ -9,6 +9,7 @@ import Ternary.List.Exact
 import Ternary.List.ExactNum ()
 import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.Sampling.Expression
+import Ternary.Sampling.Calculation
 import Ternary.QuickCheckUtil (randomsR)
 
 
