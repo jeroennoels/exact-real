@@ -15,11 +15,11 @@ import Ternary.Core.Digit
 import Ternary.Core.Addition
 
 
-newtype Var = Var Char deriving (Eq, Show)
+newtype Var = Var Int deriving (Eq, Show)
 type Binding a = [(Var,a)]
 
-varX = Var 'x'
-varY = Var 'y'
+varX = Var 0
+varY = Var 1
 
 unsafeBind :: Binding a -> Var -> a
 unsafeBind env var = fromJust (lookup var env)
@@ -284,7 +284,6 @@ evalFinite2 expr as bs = recurse (Refined (initCalc expr)) as bs
           in recurse done x' y'
 
 
-
 lala :: [Var] -> [T2] -> [T2] -> ([(Var,T2)], [T2], [T2])
 lala vars x@(a:as) y@(b:bs) =
   let (bindings1, x') = if varX `elem` vars
@@ -294,7 +293,8 @@ lala vars x@(a:as) y@(b:bs) =
                         then ((varY,b):bindings1, bs)
                         else (bindings1, y)
   in (bindings2, x', y')
-                         
+
+
 example2 :: Expr
 example2 = expression [(0, Id varX),
                        (1, Id varY),

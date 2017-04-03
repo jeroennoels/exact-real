@@ -83,7 +83,6 @@ qcEval expr as = direct == finiteExactToTriad (unsafeFinite result)
         bs = as ++ replicate (maxHeight expr) O0
         p = rootOffset expr
 
-
 data Prune2 = Prune2 Expr Expr deriving Show
 
 prune2 :: [(Ref,Node)] -> Prune2
@@ -92,11 +91,11 @@ prune2 list = expression list `Prune2` expression (pruneList list)
 instance Arbitrary Prune2 where 
   arbitrary = prune2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
 
-qcEval2 :: Prune2 -> [T2] -> [T2] -> Bool
-qcEval2 (Prune2 _ expr) as bs = direct == finiteExactToTriad (unsafeFinite result)
+qcEval2 :: Prune2 -> [T2] -> Bool
+qcEval2 (Prune2 _ expr) ds = direct == finiteExactToTriad (unsafeFinite result)
   where direct = smartEval expr binding
         binding = unsafeBind [(varX, phi as), (varY, phi bs)]
-        result = Exact (evalFinite2 expr as' bs') p
-        as' = as ++ replicate (length bs + maxHeight expr) O0
-        bs' = bs ++ replicate (length as + maxHeight expr) O0
+        result = Exact (evalFinite2 expr (as ++ zeros) (bs ++ zeros)) p
+        zeros = replicate (maxHeight expr) O0
+        (as,bs) = splitAt (length ds `div` 2) ds
         p = rootOffset expr
