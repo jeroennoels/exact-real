@@ -1,5 +1,7 @@
 module Ternary.TestExpression where
 
+import Data.List (sortBy)
+import Data.Function (on)
 import Test.QuickCheck
 import Test.QuickCheck.Checkers hiding (Binop)
 import Control.Monad (liftM, liftM2, sequence)
@@ -25,15 +27,18 @@ arbitraryRefNodes n = sequence $ leaf : map arbitraryRefNode [1..n]
   where leaf = return (0, Id varX)
 
 arbitraryRefNodes2 :: Int -> Gen [(Ref,Node)]
-arbitraryRefNodes2 n = sequence $ leafX : leafY : map arbitraryRefNode [2..n]
-  where leafX = return (0, Id varX)
-        leafY = return (1, Id varY)
+arbitraryRefNodes2 n = sequence list
+  where idX = (0, Id varX)
+        idY = (1, Id varY)
+        useX = (n+1, Plus n 0)
+        useY = (n+2, Plus (n+1) 1)
+        list = map return [idX, idY, useX, useY] ++ map arbitraryRefNode [2..n]
 
 -- The list is traversed backwards (top-down) to accumulate all nodes
 -- that are directly or indirectly referenced by the root node.
 pruneList :: [(Ref,Node)] -> [(Ref,Node)]
 pruneList list = recurse backwards [root]
-  where (root:backwards) = reverse list
+  where (root:backwards) = sortBy (flip compare `on` fst) list -- reverse list
         recurse [] acc = acc
         recurse (a@(ref,node):rest) acc =
           recurse rest $ if any (references ref) acc

@@ -42,8 +42,8 @@ initNodeCalc (Plus a b) (ShiftPlus _ p q) =
   PlusCalc (initConsumed a p) (initConsumed b q) Sa0 initOut
 
 initCalc :: Expr -> Calculation
-initCalc (Expr root nodes) =
-  Calc root $ intersectionWith initNodeCalc nodes (toShifts nodes)
+initCalc x = Calc (rootRef x) calcMap
+  where calcMap = intersectionWith initNodeCalc (nodes x) (shifts x)
 
 -- TODO Consider record syntax and improve encapsulation.
 data Actives = Actives [(Ref, NodeCalc)] [(Ref, NodeCalc)]
@@ -155,9 +155,8 @@ output :: Refinement -> [T2]
 output (Refined (Calc root nodes)) = reverse ds
   where Out ds = nodeOutput (nodes!root)
 
--- TODO avoid computing this a second time
 rootOffset :: Integral i => Expr -> i
-rootOffset (Expr root nodes) = offset (toShifts nodes ! root)
+rootOffset x = offset (shifts x ! rootRef x)
 
 evalFinite :: Expr -> [T2] -> [T2]
 evalFinite expr as = recurse (Refined (initCalc expr)) as
