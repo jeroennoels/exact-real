@@ -8,7 +8,6 @@ import Ternary.Core.Digit
 import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 
-
 type VarAssign a = [(Var, a)]
 
 unsafeBind :: VarAssign a -> Binding a

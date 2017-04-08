@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Ternary.Sampling.Expression (
-  Ref, Pre(Pre), Off(Off), Var(Var),
+  Ref(Ref), Pre(Pre), Off(Off), Var(Var),
   Expr(), Node(..), Shift(..), Binding,
   expression, arity, nodes, shifts, rootRef, offset,
   extreme, smartEval, maxHeight, bind, bindAll) where
@@ -19,8 +19,7 @@ type Binding a = Var -> a
 bindAll :: [a] -> Binding a
 bindAll values (Var i) = values !! i 
 
--- TODO consider newtype with Integral and Show instances.
-type Ref = Int
+newtype Ref = Ref Int deriving (Eq, Ord, Show)
 
 data Node = Id Var | Plus Ref Ref deriving Show
 
@@ -48,10 +47,9 @@ extractVar _ = Nothing
 assertArityConvention :: [(Ref, Node)] -> Int
 assertArityConvention assoc
   | sort vars == map Var [0..(n-1)] = n
-  | otherwise = error $ "Ternary.Sampling.Expression: assert arity convention" ++ show (sort vars)
+  | otherwise = error $ "Ternary.Sampling.Expression: assert arity convention"
   where vars = mapMaybe extractVar assoc
         n = length vars
-        
         
 -- The greatest Ref value becomes the root. 
 expression :: [(Ref, Node)] -> Expr
@@ -65,10 +63,10 @@ expression assoc = nodesMap `seq` verifiedArity `seq` Expr {
     nodesMap = fromList $ assertTopologicallySorted assoc
                  
 example :: Expr
-example = expression [(0, Id (Var 0)),
-                      (1, Plus 0 0),
-                      (2, Plus 1 1),
-                      (3, Plus 2 1)]
+example = expression [(Ref 0, Id (Var 0)),
+                      (Ref 1, Plus (Ref 0) (Ref 0)),
+                      (Ref 2, Plus (Ref 1) (Ref 1)),
+                      (Ref 3, Plus (Ref 2) (Ref 1))]
 
 -- Crude upper bound
 maxHeight :: Expr -> Int
@@ -77,8 +75,8 @@ maxHeight = Map.size . nodes
 -- A small graph can represent a big tree.  Beware the fibonacci trap!
 extreme :: Int -> Expr
 extreme depth = expression assoc      
-  where pair ref = (ref+1, Plus ref ref)
-        assoc = (0, Id (Var 0)) : map pair [0..depth]
+  where pair i = (Ref (i+1), Plus (Ref i) (Ref i))
+        assoc = (Ref 0, Id (Var 0)) : map pair [0..depth]
 
 -- Scan the map in ascending key order.  Build a new map with exactly
 -- the same domain.

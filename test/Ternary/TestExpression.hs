@@ -15,25 +15,27 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 
-id0 = (0, Id (Var 0))
-id1 = (1, Id (Var 1))
+id0 = (Ref 0, Id (Var 0))
+id1 = (Ref 1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
-arbitraryNode n = liftM2 Plus below below
+arbitraryNode n = liftM2 (Plus `on` Ref) below below
   where below = choose (0,n-1)
 
 arbitraryRefNode :: Int -> Gen (Ref,Node)
-arbitraryRefNode n = return n `pairM` arbitraryNode n
+arbitraryRefNode n = return (Ref n) `pairM` arbitraryNode n
   where pairM = liftM2 (,)
    
 arbitraryRefNodes :: Int -> Gen [(Ref,Node)]
 arbitraryRefNodes n = sequence $ return id0 : map arbitraryRefNode [1..n]
 
 arbitraryRefNodes2 :: Int -> Gen [(Ref,Node)]
-arbitraryRefNodes2 n = sequence list
-  where use0 = (n+1, Plus n 0)
-        use1 = (n+2, Plus (n+1) 1)
-        list = map return [id0, id1, use0, use1] ++ map arbitraryRefNode [2..n]
+arbitraryRefNodes2 k = sequence list
+  where
+    n = k+2
+    use0 = (Ref (n+1), Plus (Ref n) (Ref 0))
+    use1 = (Ref (n+2), Plus (Ref (n+1)) (Ref 1))
+    list = map return [id0, id1, use0, use1] ++ map arbitraryRefNode [2..n]
 
 -- The list is traversed backwards (top-down) to accumulate all nodes
 -- that are directly or indirectly referenced by the root node.
