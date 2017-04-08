@@ -13,6 +13,10 @@ import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
+import Ternary.Sampling.Evaluation
+
+id0 = (0, Id (Var 0))
+id1 = (1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
 arbitraryNode n = liftM2 Plus below below
@@ -23,22 +27,19 @@ arbitraryRefNode n = return n `pairM` arbitraryNode n
   where pairM = liftM2 (,)
    
 arbitraryRefNodes :: Int -> Gen [(Ref,Node)]
-arbitraryRefNodes n = sequence $ leaf : map arbitraryRefNode [1..n]
-  where leaf = return (0, Id varX)
+arbitraryRefNodes n = sequence $ return id0 : map arbitraryRefNode [1..n]
 
 arbitraryRefNodes2 :: Int -> Gen [(Ref,Node)]
 arbitraryRefNodes2 n = sequence list
-  where idX = (0, Id varX)
-        idY = (1, Id varY)
-        useX = (n+1, Plus n 0)
-        useY = (n+2, Plus (n+1) 1)
-        list = map return [idX, idY, useX, useY] ++ map arbitraryRefNode [2..n]
+  where use0 = (n+1, Plus n 0)
+        use1 = (n+2, Plus (n+1) 1)
+        list = map return [id0, id1, use0, use1] ++ map arbitraryRefNode [2..n]
 
 -- The list is traversed backwards (top-down) to accumulate all nodes
 -- that are directly or indirectly referenced by the root node.
 pruneList :: [(Ref,Node)] -> [(Ref,Node)]
 pruneList list = recurse backwards [root]
-  where (root:backwards) = sortBy (flip compare `on` fst) list -- reverse list
+  where (root:backwards) = sortBy (flip compare `on` fst) list
         recurse [] acc = acc
         recurse (a@(ref,node):rest) acc =
           recurse rest $ if any (references ref) acc
@@ -64,7 +65,7 @@ instance Arbitrary Expr where
   arbitrary = liftM prunedExpr arbitrary
 
 qcEvaluate :: Prune -> Bool
-qcEvaluate (Prune x y) = smartEval x xBind1 == smartEval y xBind1
+qcEvaluate (Prune x y) = smartEval x (bind 1) == smartEval y (bind 1)
 
 qcActiveNodesPrune :: Prune -> Bool
 qcActiveNodesPrune (Prune x y) =
@@ -78,15 +79,8 @@ expressionTest = quickBatch $
    [("Evaluation", property qcEvaluate),
     ("Active nodes 1", property qcActiveNodesPrune),
     ("Active nodes 2", property qcActiveNodesBottomUp),
-    ("Finite evaluation", property qcEval2)])
-
-qcEval :: Expr -> [T2] -> Bool
-qcEval expr as = direct == finiteExactToTriad (unsafeFinite result)
-  where direct = smartEval expr binding
-        binding = unsafeBind [(varX, phi as)]
-        result = Exact (evalFinite expr bs) p
-        bs = as ++ replicate (maxHeight expr) O0
-        p = rootOffset expr
+    ("Finite evaluation 1", property qcEval),
+    ("Finite evaluation 2", property qcEval2)])
 
 data Prune2 = Prune2 Expr Expr deriving Show
 
@@ -97,10 +91,21 @@ instance Arbitrary Prune2 where
   arbitrary = prune2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
 
 qcEval2 :: Prune2 -> [T2] -> Bool
-qcEval2 (Prune2 _ expr) ds = direct == finiteExactToTriad (unsafeFinite result)
-  where direct = smartEval expr binding
-        binding = unsafeBind [(varX, phi as), (varY, phi bs)]
-        result = Exact (evalFinite2 expr (as ++ zeros) (bs ++ zeros)) p
-        zeros = replicate (maxHeight expr) O0
-        (as,bs) = splitAt (length ds `div` 2) ds
-        p = rootOffset expr
+qcEval2 (Prune2 _ expr) ds = qcEval expr ds
+  
+qcEval :: Expr -> [T2] -> Bool
+qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
+  where
+    direct = smartEval expr binding
+    binding = phi . unsafeBind va
+    va = buildVarAssign expr ds
+    p = rootOffset expr
+    result = Exact (evalFinite expr va) p
+
+-- Not maximally random but good enough for now.
+buildVarAssign :: Expr -> [T2] -> VarAssign [T2]
+buildVarAssign expr as = map assign [0..n] 
+  where
+    n = arity expr - 1
+    bs = as ++ replicate (maxHeight expr) O0
+    assign i = (Var i, drop i bs)

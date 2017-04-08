@@ -9,7 +9,7 @@ import Ternary.List.Exact
 import Ternary.List.ExactNum ()
 import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.Sampling.Expression
-import Ternary.Sampling.Calculation
+import Ternary.Sampling.Evaluation
 import Ternary.QuickCheckUtil (randomsR)
 
 
@@ -49,11 +49,11 @@ performanceTest = do
 timeExpressionEval :: Expr -> [T2] -> IO ()
 timeExpressionEval expr as = do
   forceElementsIO as
-  len <- time (evalFinite expr as)
+  len <- time (evalFinite1 expr as)
   time (take len (streamDigits $ smartEval expr binding))
   putStrLn ("Number of output digits = " ++ show len)
   where
-    binding = unsafeBind [(varX, Exact as 0)]
+    binding = bind (Exact as 0)
     time list = timeIt (forceElementsIO list >> return (length list))
     
 evalPerformance = timeExpressionEval (extreme 20000) (take 5 $ randomT2s 0)

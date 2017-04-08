@@ -2,10 +2,9 @@
 
 module Ternary.Sampling.Expression (
   Ref, Pre(Pre), Off(Off), Var(Var),
-  Expr(), Node(..), Shift(..),
-  expression, nodes, shifts, rootRef, offset,
-  extreme, smartEval, maxHeight,
-  varX, varY, unsafeBind, xBind1) where
+  Expr(), Node(..), Shift(..), Binding,
+  expression, arity, nodes, shifts, rootRef, offset,
+  extreme, smartEval, maxHeight, bind, bindAll) where
 
 import Data.Maybe (fromJust, mapMaybe)
 import Data.List (sort)
@@ -16,12 +15,6 @@ import qualified Data.Map.Strict as Map
 newtype Var = Var Int deriving (Eq, Ord, Show)
 
 type Binding a = Var -> a
-
-varX = Var 0
-varY = Var 1
-
-unsafeBind :: [(Var,a)] -> Binding a
-unsafeBind env var = fromJust (lookup var env)
 
 bindAll :: [a] -> Binding a
 bindAll values (Var i) = values !! i 
@@ -72,7 +65,7 @@ expression assoc = nodesMap `seq` verifiedArity `seq` Expr {
     nodesMap = fromList $ assertTopologicallySorted assoc
                  
 example :: Expr
-example = expression [(0, Id varX),
+example = expression [(0, Id (Var 0)),
                       (1, Plus 0 0),
                       (2, Plus 1 1),
                       (3, Plus 2 1)]
@@ -85,7 +78,7 @@ maxHeight = Map.size . nodes
 extreme :: Int -> Expr
 extreme depth = expression assoc      
   where pair ref = (ref+1, Plus ref ref)
-        assoc = (0, Id varX) : map pair [0..depth]
+        assoc = (0, Id (Var 0)) : map pair [0..depth]
 
 -- Scan the map in ascending key order.  Build a new map with exactly
 -- the same domain.
@@ -107,9 +100,11 @@ smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
         eval _ (Id var) = binding var
 
 
-xBind1 = unsafeBind [(varX,1)]
-slowEvalExample = naiveEval (extreme 30) xBind1    -- takes forever
-fastEvalExample = smartEval (extreme 1000) xBind1  -- no problem
+bind :: a -> Binding a
+bind a (Var 0) = a
+
+slowEvalExample = naiveEval (extreme 30) (bind 1)    -- takes forever
+fastEvalExample = smartEval (extreme 1000) (bind 1)  -- no problem
 
 
 newtype Off = Off Int deriving Show
