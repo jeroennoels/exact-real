@@ -152,6 +152,10 @@ instance MultiplicationState MulStateAS where
     MulStateAS $ array (0,0) [(0,init)]
     where init = lookupInitial (a,b)  -- singleton array
 
+instance Show MulStateAS where
+  show (MulStateAS array) = "MulStateAS " ++ show (b-a+1)
+    where (a,b) = bounds array
+          
 -- algorithm selector
 arrayLookup :: MulStateAL
 arrayLookup = undefined

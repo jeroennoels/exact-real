@@ -41,3 +41,11 @@ unconsInputs assoc vars = (binding, map consumed assoc)
 
 evalFinite1 :: Expr -> [T2] -> [T2]
 evalFinite1 expr x = evalFinite expr [(Var 0, x)]
+
+
+                 
+example :: Expr
+example = expression [(Ref 0, Id (Var 0)),
+                      (Ref 1, Plus (Ref 0) (Ref 0)),
+                      (Ref 2, Tims (Ref 1) (Ref 1)),
+                      (Ref 3, Tims (Ref 2) (Ref 1))]

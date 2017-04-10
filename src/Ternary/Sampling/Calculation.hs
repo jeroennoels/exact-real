@@ -9,15 +9,27 @@ import qualified Data.Map.Strict as Map
 
 import Ternary.Core.Digit
 import Ternary.Core.Addition
+import Ternary.Core.Multiplication
+import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
 
 
 newtype Out = Out [T2] deriving (Show, Eq)
 
+data St = Loading | Ready MulStateAS deriving Show
+
 data Consumed = Consumed Ref Int deriving (Show, Eq)
 
-data NodeCalc = IdCalc Var Out | PlusCalc Consumed Consumed Sa Out
-              deriving (Show, Eq)
+data NodeCalc = IdCalc Var Out
+              | PlusCalc Consumed Consumed Sa Out
+              | TimsCalc Consumed Consumed St Out
+              deriving Show
+
+-- For testing purposes only.
+instance Eq NodeCalc where
+  IdCalc v _ == IdCalc w _ = v == w
+  PlusCalc a b _ _ == PlusCalc c d _ _ = a == c && b == d
+  TimsCalc a b _ _ == TimsCalc c d _ _ = a == c && b == d
 
 data Calculation = Calc Ref (Map Ref NodeCalc)
                  deriving Show
@@ -27,23 +39,28 @@ transform f (Calc root nodes) = Calc root (f nodes)
 
 nodeOutput :: NodeCalc -> Out
 nodeOutput (PlusCalc _ _ _ out) = out
+nodeOutput (TimsCalc _ _ _ out) = out
 nodeOutput (IdCalc _ out) = out
 
 initOut :: Out
 initOut = Out []
   
-initConsumed :: Ref -> Pre -> Consumed
-initConsumed ref (Pre n) = Consumed ref (-n)
+antiConsumed :: Ref -> Pre -> Consumed
+antiConsumed ref (Pre n) = Consumed ref (-n)
 
 initNodeCalc :: Node -> Shift -> NodeCalc
 initNodeCalc (Id var) NoShift = IdCalc var initOut 
 initNodeCalc (Plus a b) (ShiftPlus _ p q) =
-  PlusCalc (initConsumed a p) (initConsumed b q) Sa0 initOut
+  PlusCalc (antiConsumed a p) (antiConsumed b q) Sa0 initOut
+initNodeCalc (Tims a b) _ =
+  TimsCalc (Consumed a 0) (Consumed b 0) Loading initOut
+
 
 initCalc :: Expr -> Calculation
 initCalc x = Calc (rootRef x) calcMap
   where calcMap = intersectionWith initNodeCalc (nodes x) (shifts x)
 
+-- A node is active if we require new output on the next refinement.
 -- TODO Consider record syntax and improve encapsulation.
 data Actives = Actives [(Ref, NodeCalc)] [(Ref, NodeCalc)]
              deriving (Show, Eq)
@@ -82,6 +99,7 @@ activesAny p (Actives inputs others) = any p inputs || any p others
         
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
 child `activatedBy` PlusCalc a b _ _ = exhausted child a || exhausted child b
+child `activatedBy` TimsCalc a b _ _ = exhausted child a || exhausted child b
 child `activatedBy` IdCalc _ _ = False
  
 exhausted :: (Ref, NodeCalc) -> Consumed -> Bool
@@ -98,7 +116,11 @@ strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
 -- Precondition: the length of the output is greater than the number
 -- that is already consumed
 consume :: Map Ref NodeCalc -> Consumed -> (T2, Consumed)
-consume nodes (Consumed a p) = (result, Consumed a (p+1))
+consume nodes (Consumed a p) = if p >= 0 && idx < 0
+                               then error $ "p=" ++ show p ++
+                                    ", idx=" ++ show idx ++
+                                    "\n" ++ show (nodes!a)
+                               else (result, Consumed a (p+1))
   where result = if p < 0 then O0 else ds !! idx
         Out ds = nodeOutput (nodes!a)
         idx = length ds - 1 - p
@@ -111,6 +133,16 @@ refineNode nodes (PlusCalc a1 a2 old (Out ds)) =
   where (d1,c1) = consume nodes a1
         (d2,c2) = consume nodes a2
         (d,new) = plus (addT2 d1 d2) old
+refineNode nodes (TimsCalc a1 a2 Loading out) =
+  TimsCalc c1 c2 (Ready new) out
+  where (d1,c1) = consume nodes a1
+        (d2,c2) = consume nodes a2
+        new = initialMultiplicationState (TriangleParam d1 d2)
+refineNode nodes (TimsCalc a1 a2 (Ready ms) (Out ds)) =
+  d `seq` TimsCalc c1 c2 (Ready new) (Out (d:ds))
+  where (d1,c1) = consume nodes a1
+        (d2,c2) = consume nodes a2
+        (d,new) = kernel (d1,d2) ms
 
 update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
 update acc (ref,node) = flip (insert ref) acc (refineNode acc node)

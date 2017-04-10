@@ -49,6 +49,7 @@ pruneList list = recurse backwards [root]
 
 references :: Ref -> (Ref,Node) -> Bool
 references ref (_, Plus a b) = ref == a || ref == b
+references ref (_, Tims a b) = ref == a || ref == b
 references ref (_, Id _) = False
                          
 -- Combine an expression and its pruned equivalent

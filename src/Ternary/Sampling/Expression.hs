@@ -21,7 +21,10 @@ bindAll values (Var i) = values !! i
 
 newtype Ref = Ref Int deriving (Eq, Ord, Show)
 
-data Node = Id Var | Plus Ref Ref deriving Show
+data Node = Id Var
+          | Plus Ref Ref
+          | Tims Ref Ref
+          deriving Show
 
 data Expr = Expr {
   arity :: Int,
@@ -33,6 +36,7 @@ data Expr = Expr {
 -- Thus the graph is acyclic and the nodes are topologically sorted.
 monotonic :: (Ref, Node) -> Bool
 monotonic (c, Plus a b) = a < c && b < c
+monotonic (c, Tims a b) = a < c && b < c
 monotonic (_, Id _) = True
 
 assertTopologicallySorted :: [(Ref, Node)] -> [(Ref, Node)]
@@ -66,7 +70,7 @@ example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
                       (Ref 1, Plus (Ref 0) (Ref 0)),
                       (Ref 2, Plus (Ref 1) (Ref 1)),
-                      (Ref 3, Plus (Ref 2) (Ref 1))]
+                      (Ref 3, Tims (Ref 2) (Ref 1))]
 
 -- Crude upper bound
 maxHeight :: Expr -> Int
@@ -88,6 +92,7 @@ mapScanL f = foldlWithKey' op empty
 naiveEval :: Num a => Expr -> Binding a -> a
 naiveEval (Expr _ root nodes _) binding = eval (nodes!root)
   where eval (Plus a b) = eval (nodes!a) + eval (nodes!b)
+        eval (Tims a b) = eval (nodes!a) * eval (nodes!b)
         eval (Id var) = binding var
 
 -- Using the mapScanL combinator is easy and efficient.  It works
@@ -95,8 +100,8 @@ naiveEval (Expr _ root nodes _) binding = eval (nodes!root)
 smartEval :: Num a => Expr -> Binding a -> a
 smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
   where eval m (Plus a b) = m!a + m!b
+        eval m (Tims a b) = m!a * m!b
         eval _ (Id var) = binding var
-
 
 bind :: a -> Binding a
 bind a (Var 0) = a
@@ -108,10 +113,14 @@ fastEvalExample = smartEval (extreme 1000) (bind 1)  -- no problem
 newtype Off = Off Int deriving Show
 newtype Pre = Pre Int deriving Show
 
-data Shift = NoShift | ShiftPlus Off Pre Pre deriving Show
+data Shift = NoShift
+           | ShiftPlus Off Pre Pre
+           | ShiftTims Off
+           deriving Show
 
 offset :: Integral i => Shift -> i 
 offset (ShiftPlus (Off p) _ _) = fromIntegral p
+offset (ShiftTims (Off p)) = fromIntegral p
 offset NoShift = 0
 
 shiftPlus :: Shift -> Shift -> Shift
@@ -120,8 +129,14 @@ shiftPlus sx sy = ShiftPlus (Off (s+1)) (Pre (s-p)) (Pre (s-q))
         q = offset sy
         s = max p q
 
+shiftTims :: Shift -> Shift -> Shift
+shiftTims sx sy = ShiftTims (Off (p+q+1)) 
+  where p = offset sx
+        q = offset sy
+
 -- Remember this only works if the nodes are ordered, bottom up.
 toShifts :: Map Ref Node -> Map Ref Shift
 toShifts = mapScanL shift
   where shift m (Plus a b) = shiftPlus (m!a) (m!b)
+        shift m (Tims a b) = shiftTims (m!a) (m!b)
         shift _ (Id _) = NoShift
