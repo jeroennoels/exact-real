@@ -115,34 +115,44 @@ strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
 
 -- Precondition: the length of the output is greater than the number
 -- that is already consumed
-consume :: Map Ref NodeCalc -> Consumed -> (T2, Consumed)
-consume nodes (Consumed a p) = if p >= 0 && idx < 0
-                               then error $ "p=" ++ show p ++
-                                    ", idx=" ++ show idx ++
-                                    "\n" ++ show (nodes!a)
-                               else (result, Consumed a (p+1))
-  where result = if p < 0 then O0 else ds !! idx
-        Out ds = nodeOutput (nodes!a)
+consume :: Map Ref NodeCalc -> Consumed -> Maybe (T2, Consumed)
+consume nodes (Consumed a p) 
+  | p < 0 = Just (O0, done)
+  | idx >= 0 = Just (ds !! idx, done)
+  | otherwise = Nothing
+  where Out ds = nodeOutput (nodes!a)
         idx = length ds - 1 - p
-        
+        done = Consumed a (p+1)
+
+both :: Maybe a -> Maybe b -> Maybe (a,b)
+both (Just a) (Just b) = Just (a,b)
+both _ _ = Nothing
+
+-- TODO this is ugly
+process :: Map Ref NodeCalc -> (T2 -> T2 -> a) -> Consumed -> Consumed
+           -> Maybe (a, Consumed, Consumed)
+process nodes binop a1 a2 =
+  case consume nodes a1 `both` consume nodes a2 of
+   Nothing -> Nothing
+   Just ((d1,c1), (d2,c2)) -> Just (binop d1 d2, c1, c2)
+
+  
 -- Precondition: the given node is not an input node
 refineNode :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
 refineNode _ (IdCalc _ _) = error "New input is needed to refine an Id node"
-refineNode nodes (PlusCalc a1 a2 old (Out ds)) =
-  d `seq` PlusCalc c1 c2 new (Out (d:ds))
-  where (d1,c1) = consume nodes a1
-        (d2,c2) = consume nodes a2
-        (d,new) = plus (addT2 d1 d2) old
-refineNode nodes (TimsCalc a1 a2 Loading out) =
-  TimsCalc c1 c2 (Ready new) out
-  where (d1,c1) = consume nodes a1
-        (d2,c2) = consume nodes a2
-        new = initialMultiplicationState (TriangleParam d1 d2)
-refineNode nodes (TimsCalc a1 a2 (Ready ms) (Out ds)) =
-  d `seq` TimsCalc c1 c2 (Ready new) (Out (d:ds))
-  where (d1,c1) = consume nodes a1
-        (d2,c2) = consume nodes a2
-        (d,new) = kernel (d1,d2) ms
+refineNode nodes orig@(PlusCalc a1 a2 old (Out ds)) =
+  maybe orig result (process nodes binop a1 a2)
+  where binop d1 d2 = plus (addT2 d1 d2) old
+        result ((d,new),c1,c2) = d `seq` PlusCalc c1 c2 new (Out (d:ds))
+refineNode nodes orig@(TimsCalc a1 a2 Loading out) =
+  maybe orig result (process nodes binop a1 a2)
+  where binop d1 d2 = initialMultiplicationState (TriangleParam d1 d2)
+        result (new,c1,c2) = TimsCalc c1 c2 (Ready new) out
+refineNode nodes orig@(TimsCalc a1 a2 (Ready ms) (Out ds)) =
+  maybe orig result (process nodes binop a1 a2)
+  where binop d1 d2 = kernel (d1,d2) ms
+        result ((d,new),c1,c2) = d `seq` TimsCalc c1 c2 (Ready new) (Out (d:ds))
+
 
 update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
 update acc (ref,node) = flip (insert ref) acc (refineNode acc node)

@@ -3,8 +3,8 @@
 module Ternary.Sampling.Expression (
   Ref(Ref), Pre(Pre), Off(Off), Var(Var),
   Expr(), Node(..), Shift(..), Binding,
-  expression, arity, nodes, shifts, rootRef, offset,
-  extreme, smartEval, maxHeight, bind, bindAll) where
+  expression, arity, nodes, shifts, rootRef, offset, example,
+  extreme, smartEval, significantDigits, bind, bindAll) where
 
 import Data.Maybe (fromJust, mapMaybe)
 import Data.List (sort)
@@ -66,15 +66,10 @@ expression assoc = nodesMap `seq` verifiedArity `seq` Expr {
     verifiedArity = assertArityConvention assoc
     nodesMap = fromList $ assertTopologicallySorted assoc
                  
-example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
                       (Ref 1, Plus (Ref 0) (Ref 0)),
-                      (Ref 2, Plus (Ref 1) (Ref 1)),
+                      (Ref 2, Tims (Ref 1) (Ref 1)),
                       (Ref 3, Tims (Ref 2) (Ref 1))]
-
--- Crude upper bound
-maxHeight :: Expr -> Int
-maxHeight = Map.size . nodes
 
 -- A small graph can represent a big tree.  Beware the fibonacci trap!
 extreme :: Int -> Expr
@@ -101,6 +96,13 @@ smartEval :: Num a => Expr -> Binding a -> a
 smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
   where eval m (Plus a b) = m!a + m!b
         eval m (Tims a b) = m!a * m!b
+        eval _ (Id var) = binding var
+
+-- TODO abstract over this pattern?
+significantDigits :: (Ord a, Num a) => Expr -> Binding a -> a
+significantDigits (Expr _ root nodes _) binding = mapScanL eval nodes ! root
+  where eval m (Plus a b) = 1 + max (m!a) (m!b)
+        eval m (Tims a b) = 1 + m!a + m!b
         eval _ (Id var) = binding var
 
 bind :: a -> Binding a

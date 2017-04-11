@@ -19,8 +19,9 @@ id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
-arbitraryNode n = liftM2 (Plus `on` Ref) below below
+arbitraryNode n = liftM2 (op `on` Ref) below below
   where below = choose (0,n-1)
+        op = if mod n 5 == 0 then Tims else Plus
 
 arbitraryRefNode :: Int -> Gen (Ref,Node)
 arbitraryRefNode n = return (Ref n) `pairM` arbitraryNode n
@@ -33,7 +34,7 @@ arbitraryRefNodes2 :: Int -> Gen [(Ref,Node)]
 arbitraryRefNodes2 k = sequence list
   where
     n = k+2
-    use0 = (Ref (n+1), Plus (Ref n) (Ref 0))
+    use0 = (Ref (n+1), Tims (Ref n) (Ref 0))
     use1 = (Ref (n+2), Plus (Ref (n+1)) (Ref 1))
     list = map return [id0, id1, use0, use1] ++ map arbitraryRefNode [2..n]
 
@@ -100,15 +101,25 @@ qcEval :: Expr -> [T2] -> Bool
 qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
   where
     direct = smartEval expr binding
-    binding = phi . unsafeBind va
-    va = buildVarAssign expr ds
+    (va, binding) = buildVarAssign expr ds
     p = rootOffset expr
     result = Exact (evalFinite expr va) p
 
 -- Not maximally random but good enough for now.
-buildVarAssign :: Expr -> [T2] -> VarAssign [T2]
-buildVarAssign expr as = map assign [0..n] 
+buildVarAssign :: Expr -> [T2] -> (VarAssign [T2], Binding Triad)
+buildVarAssign expr as = (map assign [0..n], binding) 
   where
     n = arity expr - 1
-    bs = as ++ replicate (maxHeight expr) O0
-    assign i = (Var i, drop i bs)
+    k = significantDigits expr (const (1 + length as))
+    zeros = replicate k O0
+    digits i = drop i as ++ replicate (n-i) O0 
+    assign i = (Var i, digits i ++ zeros)
+    binding (Var i) =  phi (digits i)
+
+
+example :: Expr
+example = expression [(Ref 0, Id (Var 0)),
+                      (Ref 1, Tims (Ref 0) (Ref 0)),
+                      (Ref 2, Plus (Ref 1) (Ref 1)),
+                      (Ref 3, Tims (Ref 2) (Ref 1))]
+
