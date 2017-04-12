@@ -15,13 +15,19 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 
+example :: Expr                 
+example = expression [(Ref 0, Id (Var 0)),
+                      (Ref 1, Plus (Ref 0) (Ref 0)),
+                      (Ref 2, Tims (Ref 1) (Ref 1)),
+                      (Ref 3, Tims (Ref 2) (Ref 1))]
+
 id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
-arbitraryNode n = liftM2 (op `on` Ref) below below
+arbitraryNode n = liftM2 (binop `on` Ref) below below
   where below = choose (0,n-1)
-        op = if mod n 5 == 0 then Tims else Plus
+        binop = if mod n 5 == 0 then Tims else Plus
 
 arbitraryRefNode :: Int -> Gen (Ref,Node)
 arbitraryRefNode n = return (Ref n) `pairM` arbitraryNode n
@@ -71,18 +77,13 @@ instance Arbitrary Expr where
 qcEvaluate :: Prune -> Bool
 qcEvaluate (Prune x y) = smartEval x (bind 1) == smartEval y (bind 1)
 
-qcActiveNodesPrune :: Prune -> Bool
-qcActiveNodesPrune (Prune x y) =
-  activeNodes (initCalc x) == activeNodes (initCalc y)
-
 qcActiveNodesBottomUp :: Expr -> Bool
 qcActiveNodesBottomUp = strictlyIncreasing . getOthers . activeNodes . initCalc 
                        
 expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
-    ("Active nodes 1", property qcActiveNodesPrune),
-    ("Active nodes 2", property qcActiveNodesBottomUp),
+    ("Active nodes", property qcActiveNodesBottomUp),
     ("Finite evaluation 1", property qcEval),
     ("Finite evaluation 2", property qcEval2)])
 
@@ -115,11 +116,3 @@ buildVarAssign expr as = (map assign [0..n], binding)
     digits i = drop i as ++ replicate (n-i) O0 
     assign i = (Var i, digits i ++ zeros)
     binding (Var i) =  phi (digits i)
-
-
-example :: Expr
-example = expression [(Ref 0, Id (Var 0)),
-                      (Ref 1, Tims (Ref 0) (Ref 0)),
-                      (Ref 2, Plus (Ref 1) (Ref 1)),
-                      (Ref 3, Tims (Ref 2) (Ref 1))]
-

@@ -14,22 +14,16 @@ import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
 
 
-newtype Out = Out [T2] deriving (Show, Eq)
+newtype Out = Out [T2] deriving Show
 
 data St = Loading | Ready MulStateAS deriving Show
 
-data Consumed = Consumed Ref Int deriving (Show, Eq)
+data Consumed = Consumed Ref Int deriving Show
 
 data NodeCalc = IdCalc Var Out
               | PlusCalc Consumed Consumed Sa Out
               | TimsCalc Consumed Consumed St Out
               deriving Show
-
--- For testing purposes only.
-instance Eq NodeCalc where
-  IdCalc v _ == IdCalc w _ = v == w
-  PlusCalc a b _ _ == PlusCalc c d _ _ = a == c && b == d
-  TimsCalc a b _ _ == TimsCalc c d _ _ = a == c && b == d
 
 data Calculation = Calc Ref (Map Ref NodeCalc)
                  deriving Show
@@ -63,7 +57,7 @@ initCalc x = Calc (rootRef x) calcMap
 -- A node is active if we require new output on the next refinement.
 -- TODO Consider record syntax and improve encapsulation.
 data Actives = Actives [(Ref, NodeCalc)] [(Ref, NodeCalc)]
-             deriving (Show, Eq)
+             deriving Show
 
 getInputs :: Actives -> [(Ref, NodeCalc)]
 getInputs (Actives inputs _) = inputs
@@ -124,34 +118,35 @@ consume nodes (Consumed a p)
         idx = length ds - 1 - p
         done = Consumed a (p+1)
 
-both :: Maybe a -> Maybe b -> Maybe (a,b)
-both (Just a) (Just b) = Just (a,b)
-both _ _ = Nothing
 
--- TODO this is ugly
 process :: Map Ref NodeCalc -> (T2 -> T2 -> a) -> Consumed -> Consumed
            -> Maybe (a, Consumed, Consumed)
-process nodes binop a1 a2 =
-  case consume nodes a1 `both` consume nodes a2 of
-   Nothing -> Nothing
-   Just ((d1,c1), (d2,c2)) -> Just (binop d1 d2, c1, c2)
+process nodes (#) a b =
+  case (consume nodes a, consume nodes b) of
+   (Just (u,c), Just (v,d)) -> Just (u#v,c,d)
+   _ -> Nothing
 
   
 -- Precondition: the given node is not an input node
 refineNode :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
-refineNode _ (IdCalc _ _) = error "New input is needed to refine an Id node"
-refineNode nodes orig@(PlusCalc a1 a2 old (Out ds)) =
-  maybe orig result (process nodes binop a1 a2)
-  where binop d1 d2 = plus (addT2 d1 d2) old
-        result ((d,new),c1,c2) = d `seq` PlusCalc c1 c2 new (Out (d:ds))
-refineNode nodes orig@(TimsCalc a1 a2 Loading out) =
-  maybe orig result (process nodes binop a1 a2)
-  where binop d1 d2 = initialMultiplicationState (TriangleParam d1 d2)
-        result (new,c1,c2) = TimsCalc c1 c2 (Ready new) out
-refineNode nodes orig@(TimsCalc a1 a2 (Ready ms) (Out ds)) =
-  maybe orig result (process nodes binop a1 a2)
-  where binop d1 d2 = kernel (d1,d2) ms
-        result ((d,new),c1,c2) = d `seq` TimsCalc c1 c2 (Ready new) (Out (d:ds))
+-- Id
+refineNode _ (IdCalc _ _) =
+  error "New input is needed to refine an Id node"
+-- Plus
+refineNode nodes orig@(PlusCalc a b old (Out ws)) =
+  maybe orig result (process nodes binop a b)
+  where binop u v = plus (addT2 u v) old
+        result ((w,new),c,d) = w `seq` PlusCalc c d new (Out (w:ws))
+-- Times during load
+refineNode nodes orig@(TimsCalc a b Loading out) =
+  maybe orig result (process nodes binop a b)
+  where binop u v = initialMultiplicationState (TriangleParam u v)
+        result (new,c,d) = TimsCalc c d (Ready new) out
+-- Times ready
+refineNode nodes orig@(TimsCalc a b (Ready state) (Out ws)) =
+  maybe orig result (process nodes binop a b)
+  where binop u v = kernel (u,v) state
+        result ((w,new),c,d) = w `seq` TimsCalc c d (Ready new) (Out (w:ws))
 
 
 update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc

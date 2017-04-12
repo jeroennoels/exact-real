@@ -3,7 +3,7 @@
 module Ternary.Sampling.Expression (
   Ref(Ref), Pre(Pre), Off(Off), Var(Var),
   Expr(), Node(..), Shift(..), Binding,
-  expression, arity, nodes, shifts, rootRef, offset, example,
+  expression, arity, nodes, shifts, rootRef, offset,
   extreme, smartEval, significantDigits, bind, bindAll) where
 
 import Data.Maybe (fromJust, mapMaybe)
@@ -15,6 +15,9 @@ import qualified Data.Map.Strict as Map
 newtype Var = Var Int deriving (Eq, Ord, Show)
 
 type Binding a = Var -> a
+
+bind :: a -> Binding a
+bind a (Var 0) = a
 
 bindAll :: [a] -> Binding a
 bindAll values (Var i) = values !! i 
@@ -65,11 +68,6 @@ expression assoc = nodesMap `seq` verifiedArity `seq` Expr {
   where
     verifiedArity = assertArityConvention assoc
     nodesMap = fromList $ assertTopologicallySorted assoc
-                 
-example = expression [(Ref 0, Id (Var 0)),
-                      (Ref 1, Plus (Ref 0) (Ref 0)),
-                      (Ref 2, Tims (Ref 1) (Ref 1)),
-                      (Ref 3, Tims (Ref 2) (Ref 1))]
 
 -- A small graph can represent a big tree.  Beware the fibonacci trap!
 extreme :: Int -> Expr
@@ -104,9 +102,6 @@ significantDigits (Expr _ root nodes _) binding = mapScanL eval nodes ! root
   where eval m (Plus a b) = 1 + max (m!a) (m!b)
         eval m (Tims a b) = 1 + m!a + m!b
         eval _ (Id var) = binding var
-
-bind :: a -> Binding a
-bind a (Var 0) = a
 
 slowEvalExample = naiveEval (extreme 30) (bind 1)    -- takes forever
 fastEvalExample = smartEval (extreme 1000) (bind 1)  -- no problem
