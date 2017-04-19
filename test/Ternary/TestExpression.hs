@@ -5,7 +5,7 @@ import Data.Function (on)
 import Test.QuickCheck
 import Test.QuickCheck.Checkers hiding (Binop)
 import Control.Monad (liftM, liftM2, sequence)
-
+import Data.Map.Strict ((!))
 import Ternary.Core.Digit
 import Ternary.Arbitraries
 import Ternary.Util.Triad
@@ -116,3 +116,10 @@ buildVarAssign expr as = (map assign [0..n], binding)
     digits i = drop i as ++ replicate (n-i) O0 
     assign i = (Var i, digits i ++ zeros)
     binding (Var i) =  phi (digits i)
+
+
+significantDigits :: (Ord a, Num a) => Expr -> Binding a -> a
+significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
+  where eval m (Plus a b) = 1 + max (m!a) (m!b)
+        eval m (Tims a b) = 1 + m!a + m!b
+        eval _ (Id var) = binding var

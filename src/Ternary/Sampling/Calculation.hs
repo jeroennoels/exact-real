@@ -16,6 +16,12 @@ import Ternary.Sampling.Expression
 
 newtype Out = Out [T2] deriving Show
 
+initOut :: Out
+initOut = Out []
+
+getDigit :: Out -> Int -> T2
+getDigit (Out ds) i = ds !! (length ds - 1 - i)
+
 data St = Loading | Ready MulStateAS deriving Show
 
 data Consumed = Consumed Ref Int deriving Show
@@ -35,9 +41,6 @@ nodeOutput :: NodeCalc -> Out
 nodeOutput (PlusCalc _ _ _ out) = out
 nodeOutput (TimsCalc _ _ _ out) = out
 nodeOutput (IdCalc _ out) = out
-
-initOut :: Out
-initOut = Out []
   
 antiConsumed :: Ref -> Pre -> Consumed
 antiConsumed ref (Pre n) = Consumed ref (-n)
@@ -74,7 +77,6 @@ consActive node (Actives inputs others)
   | isInput node = Actives (node:inputs) others
   | otherwise = Actives inputs (node:others)
 
--- Include this in the Calculation type?
 activesRoot :: Calculation -> Actives
 activesRoot (Calc root nodes) = consActive (root, nodes!root) (Actives [] [])
 
@@ -161,12 +163,10 @@ newtype Refinement = Refined Calculation
 data NeedsInput = NeedsInput Calculation Actives
 data Continue = Continue Calculation [(Ref, NodeCalc)] 
 
-extractVar :: (Ref, NodeCalc) -> Var
-extractVar (_, IdCalc var _) = var
-
 variables :: NeedsInput -> [Var]
-variables (NeedsInput _ (Actives inputs _)) = map extractVar inputs
-
+variables (NeedsInput _ (Actives inputs _)) = map (extract . snd) inputs
+  where extract (IdCalc var _) = var
+        
 refine :: Refinement -> Either Refinement NeedsInput
 refine (Refined calc)
   | null inputs = Left $ Refined (refineCalculation actives calc)
