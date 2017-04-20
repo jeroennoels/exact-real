@@ -2,10 +2,14 @@
 
 module Ternary.Sampling.Calculation where
 
-import Data.Either
-import Data.List (foldl')
-import Data.Map.Strict (Map, insert, foldrWithKey', intersectionWith, (!))
+import qualified Data.Sequence as Sequence
 import qualified Data.Map.Strict as Map
+
+import Data.Either
+import Data.Foldable (toList)
+import Data.List (foldl')
+import Data.Sequence (Seq, (|>))
+import Data.Map.Strict (Map, insert, foldrWithKey', intersectionWith, (!))
 
 import Ternary.Core.Digit
 import Ternary.Core.Addition
@@ -14,13 +18,23 @@ import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
 
 
-newtype Out = Out [T2] deriving Show
+newtype Out = Out (Seq T2) deriving Show
 
 initOut :: Out
-initOut = Out []
+initOut = Out (Sequence.empty)
 
-getDigit :: Out -> Int -> T2
-getDigit (Out ds) i = ds !! (length ds - 1 - i)
+digitAt :: Out -> Int -> T2
+digitAt (Out ds) i = Sequence.index ds i
+
+append :: Out -> T2 -> Out
+append (Out ds) d = Out (ds |> d)
+
+produced :: Out -> Int
+produced (Out ds) = length ds
+
+outDigits :: Out -> [T2]
+outDigits (Out ds) = toList ds
+
 
 data St = Loading | Ready MulStateAS deriving Show
 
@@ -99,8 +113,8 @@ child `activatedBy` TimsCalc a b _ _ = exhausted child a || exhausted child b
 child `activatedBy` IdCalc _ _ = False
  
 exhausted :: (Ref, NodeCalc) -> Consumed -> Bool
-exhausted (ref, child) (Consumed leg n) = ref == leg && length produced == n
-  where Out produced = nodeOutput child
+exhausted (ref, child) (Consumed leg n) =
+  ref == leg && produced (nodeOutput child) == n
 
 activeNodesExample :: Int -> Actives
 activeNodesExample = activeNodes . initCalc . extreme 
@@ -114,10 +128,9 @@ strictlyIncreasing list = and $ zipWith (<) refs (tail refs)
 consume :: Map Ref NodeCalc -> Consumed -> Maybe (T2, Consumed)
 consume nodes (Consumed a p) 
   | p < 0 = Just (O0, done)
-  | idx >= 0 = Just (ds !! idx, done)
+  | p < produced out = Just (out `digitAt` p, done)
   | otherwise = Nothing
-  where Out ds = nodeOutput (nodes!a)
-        idx = length ds - 1 - p
+  where out = nodeOutput (nodes!a)
         done = Consumed a (p+1)
 
 
@@ -135,20 +148,20 @@ refineNode :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
 refineNode _ (IdCalc _ _) =
   error "New input is needed to refine an Id node"
 -- Plus
-refineNode nodes orig@(PlusCalc a b old (Out ws)) =
+refineNode nodes orig@(PlusCalc a b old out) =
   maybe orig result (process nodes binop a b)
   where binop u v = plus (addT2 u v) old
-        result ((w,new),c,d) = w `seq` PlusCalc c d new (Out (w:ws))
+        result ((w,new),c,d) = w `seq` PlusCalc c d new (out `append` w)
 -- Times during load
 refineNode nodes orig@(TimsCalc a b Loading out) =
   maybe orig result (process nodes binop a b)
   where binop u v = initialMultiplicationState (TriangleParam u v)
         result (new,c,d) = TimsCalc c d (Ready new) out
 -- Times ready
-refineNode nodes orig@(TimsCalc a b (Ready state) (Out ws)) =
+refineNode nodes orig@(TimsCalc a b (Ready state) out) =
   maybe orig result (process nodes binop a b)
   where binop u v = kernel (u,v) state
-        result ((w,new),c,d) = w `seq` TimsCalc c d (Ready new) (Out (w:ws))
+        result ((w,new),c,d) = w `seq` TimsCalc c d (Ready new) (out `append` w)
 
 
 update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
@@ -182,14 +195,13 @@ provideInput binding (NeedsInput calc (Actives inputs others)) =
   Continue (foldl' (flip $ refineInput binding) calc inputs) others
 
 nodeInput :: (Var -> T2) -> NodeCalc -> NodeCalc
-nodeInput binding (IdCalc var (Out ds)) = IdCalc var (Out (binding var : ds))
+nodeInput binding (IdCalc var out) = IdCalc var (out `append` binding var)
 
 refineInput :: (Var -> T2) -> (Ref, NodeCalc) -> Calculation -> Calculation
 refineInput binding (ref, node) = transform $ insert ref (nodeInput binding node)
 
 output :: Refinement -> [T2]
-output (Refined (Calc root nodes)) = reverse ds
-  where Out ds = nodeOutput (nodes!root)
+output (Refined (Calc root nodes)) = outDigits $ nodeOutput (nodes!root)
 
 rootOffset :: Integral i => Expr -> i
 rootOffset x = offset (shifts x ! rootRef x)
