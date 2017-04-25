@@ -88,7 +88,7 @@ extractVar _ = Nothing
 assertArityConvention :: [(Ref, Node)] -> Int
 assertArityConvention assoc
   | sort vars == map Var [0..n-1] = n
-  | otherwise = error $ "Ternary.Sampling.Expression: assert arity convention"
+  | otherwise = error "Ternary.Sampling.Expression: assert arity convention"
   where vars = mapMaybe (extractVar . snd) assoc
         n = length vars
 

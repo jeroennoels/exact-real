@@ -112,10 +112,10 @@ buildVarAssign expr as = (map assign [0..n], binding)
   where
     n = arity expr - 1
     k = significantDigits expr (const (1 + length as))
-    zeros = replicate k O0
+    zeros = replicate (k+1) O0
     digits i = drop i as ++ replicate (n-i) O0 
     assign i = (Var i, digits i ++ zeros)
-    binding (Var i) =  phi (digits i)
+    binding (Var i) = phi (digits i)
 
 
 significantDigits :: (Ord a, Num a) => Expr -> Binding a -> a

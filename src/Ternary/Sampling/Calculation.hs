@@ -8,7 +8,6 @@ import qualified Data.Map.Strict as Map
 import Data.Either
 import Data.Foldable (toList)
 import Data.List (foldl')
-import Data.Sequence (Seq, (|>))
 import Data.Map.Strict (Map, insert, foldrWithKey', intersectionWith, (!))
 
 import Ternary.Core.Digit
@@ -18,7 +17,7 @@ import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
 
 
-newtype Out = Out (Seq T2) deriving Show
+newtype Out = Out (Sequence.Seq T2) deriving Show
 
 initOut :: Out
 initOut = Out (Sequence.empty)
@@ -27,10 +26,10 @@ digitAt :: Out -> Int -> T2
 digitAt (Out ds) i = Sequence.index ds i
 
 append :: Out -> T2 -> Out
-append (Out ds) d = Out (ds |> d)
+append (Out ds) d = Out (ds Sequence.|> d)
 
 produced :: Out -> Int
-produced (Out ds) = length ds
+produced (Out ds) = Sequence.length ds
 
 outDigits :: Out -> [T2]
 outDigits (Out ds) = toList ds
