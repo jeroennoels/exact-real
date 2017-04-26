@@ -173,29 +173,34 @@ process nodes (#) a b =
    _ -> Nothing
 
 
-refineNode :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
-
-refineNode _ (IdCalc _ _) =
-  error "New input is needed to refine an Id node"
-
-refineNode nodes orig@(PlusCalc a b old out) =
-  maybe orig result (process nodes binop a b)
-  where binop u v = plus (addT2 u v) old
-        result ((w,new),c,d) = w `seq` PlusCalc c d new (out `append` w)
-
-refineNode nodes orig@(TimsCalc a b Loading out) =
-  maybe orig result (process nodes binop a b)
-  where binop u v = initialMultiplicationState (TriangleParam u v)
-        result (new,c,d) = TimsCalc c d (Ready new) out
-
-refineNode nodes orig@(TimsCalc a b (Ready state) out) =
-  maybe orig result (process nodes binop a b)
-  where binop u v = kernel (u,v) state
-        result ((w,new),c,d) = w `seq` TimsCalc c d (Ready new) (out `append` w)
+refineOperation :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
+---------------
+refineOperation nodes
+  orig@(PlusCalc a b old out) =
+    maybe orig result (process nodes kern a b)
+  where
+    result ((w,new),c,d) = w `seq` PlusCalc c d new (append out w)
+    kern u v = plus (addT2 u v) old
+---------------
+refineOperation nodes
+  orig@(TimsCalc a b Loading out) =
+    maybe orig result (process nodes kern a b)
+  where
+    result (new,c,d) = TimsCalc c d (Ready new) out
+    kern u v = initialMultiplicationState (TriangleParam u v)
+---------------
+refineOperation nodes
+  orig@(TimsCalc a b (Ready old) out) =
+    maybe orig result (process nodes kern a b)
+  where
+    result ((w,new),c,d) = w `seq` TimsCalc c d (Ready new) (append out w)
+    kern u v = kernel (u,v) old
+---------------
+refineOperation _ _ = error "New input is needed to refine an Id node"
 
 
 update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
-update acc (ref,node) = flip (insert ref) acc (refineNode acc node)
+update acc (ref,node) = flip (insert ref) acc (refineOperation acc node)
 
 refineCalculation :: Actives -> Calculation -> Calculation
 refineCalculation (Actives ins ops) calc@(Calc root nodes)
