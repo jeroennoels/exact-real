@@ -47,3 +47,6 @@ digitsRev radix k = let (cont, last) = quotRem k radix
 
 digits :: Integral a => a -> a -> [a]
 digits radix = reverse . digitsRev radix
+
+strictlyIncreasing :: Ord a => [a] -> Bool
+strictlyIncreasing list = and $ zipWith (<) list (tail list)
