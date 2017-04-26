@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Ternary.Sampling.Calculation where
 
 import qualified Data.Sequence as Sequence
@@ -165,37 +163,42 @@ consume nodes (Consumed a p)
         done = Consumed a (p+1)
 
 
-process :: Map Ref NodeCalc -> (T2 -> T2 -> a) -> Consumed -> Consumed
-           -> Maybe (a, Consumed, Consumed)
-process nodes (#) a b =
-  case (consume nodes a, consume nodes b) of
-   (Just (u,c), Just (v,d)) -> Just (u#v,c,d)
-   _ -> Nothing
+both :: Maybe a -> Maybe b -> Maybe (a,b)
+both (Just a) (Just b) = Just (a,b)
+both _ _ = Nothing
+
+type DigitPairConsumed = ((T2, Consumed), (T2, Consumed))
+
+consume2 :: Map Ref NodeCalc -> Consumed -> Consumed -> Maybe DigitPairConsumed
+consume2 nodes a b = both (consume nodes a) (consume nodes b)
 
 
 refineOperation :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
----------------
+--
 refineOperation nodes
-  orig@(PlusCalc a b old out) =
-    maybe orig result (process nodes kern a b)
+  orig@(PlusCalc a b old out) = maybe orig result (consume2 nodes a b)
   where
-    result ((w,new),c,d) = w `seq` PlusCalc c d new (append out w)
-    kern u v = plus (addT2 u v) old
----------------
+    result :: DigitPairConsumed -> NodeCalc
+    result ((u,c),(v,d)) =
+      let (w,new) = plus (addT2 u v) old
+      in w `seq` PlusCalc c d new (append out w)
+--
 refineOperation nodes
-  orig@(TimsCalc a b Loading out) =
-    maybe orig result (process nodes kern a b)
+  orig@(TimsCalc a b Loading out) = maybe orig result (consume2 nodes a b)
   where
-    result (new,c,d) = TimsCalc c d (Ready new) out
-    kern u v = initialMultiplicationState (TriangleParam u v)
----------------
+    result :: DigitPairConsumed -> NodeCalc
+    result ((u,c),(v,d)) =
+      let new = initialMultiplicationState (TriangleParam u v)
+      in TimsCalc c d (Ready new) out
+--
 refineOperation nodes
-  orig@(TimsCalc a b (Ready old) out) =
-    maybe orig result (process nodes kern a b)
+  orig@(TimsCalc a b (Ready old) out) = maybe orig result (consume2 nodes a b)
   where
-    result ((w,new),c,d) = w `seq` TimsCalc c d (Ready new) (append out w)
-    kern u v = kernel (u,v) old
----------------
+    result :: DigitPairConsumed -> NodeCalc
+    result ((u,c),(v,d)) =
+      let (w,new) = kernel (u,v) old
+      in  w `seq` TimsCalc c d (Ready new) (append out w)
+--
 refineOperation _ _ = error "New input is needed to refine an Id node"
 
 

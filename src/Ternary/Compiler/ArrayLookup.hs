@@ -1,6 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnboxedTuples #-}
-{-# LANGUAGE BangPatterns #-}
 
 module Ternary.Compiler.ArrayLookup (
   splitIn, splitOut, mixIn, mixOut,
