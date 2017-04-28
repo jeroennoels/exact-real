@@ -80,7 +80,7 @@ nodeOutput (IdCalc _ out) = out
 -- Remember that addition needs to prepend a certain number of zeros
 -- to one of its arguments to cancel the difference in their offsets.
 -- This is modeled with a negative number: (Consumed ref (-n)) means
--- that shall first receive n additional zeros, before we start
+-- that we shall first receive n additional zeros, before we start
 -- consuming actual output from the node referenced by ref.
 
 antiConsumed :: Ref -> Pre -> Consumed
@@ -202,15 +202,24 @@ refineOperation nodes
 refineOperation _ _ = error "New input is needed to refine an Id node"
 
 
-update :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
-update acc (ref,node) = flip (insert ref) acc (refineOperation acc node)
+refineNode :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
+refineNode acc (ref,node) = insert ref (refineOperation acc node) acc
+
+-- The above node-refiner is folded over the list of active operation
+-- nodes.  Remember, by construction this list is ordered in a way
+-- that corresponds to moving upwards in the DAG.  This is crucial,
+-- because the outputs of these refinements will be consumed during
+-- some subsequent refinement within the same traversal.
 
 refineCalculation :: Actives -> Calculation -> Calculation
 refineCalculation (Actives ins ops) calc@(Calc root nodes)
-  | null ins = Calc root (foldl' update nodes ops)
+  | null ins = Calc root (foldl' refineNode nodes ops)
   | otherwise = error "refineCalculation: active inputs"
 
-newtype Refinement = Refined Calculation
+-- When there are active input nodes, the calculation must be
+-- interrupted to provide the input needed to continue:
+
+newtype Refined = Refined Calculation
 data NeedsInput = NeedsInput Calculation Actives
 data Continue = Continue Calculation [(Ref, NodeCalc)] 
 
@@ -218,13 +227,13 @@ variables :: NeedsInput -> [Var]
 variables (NeedsInput _ (Actives ins _)) = map (extract . snd) ins
   where extract (IdCalc var _) = var
         
-refine :: Refinement -> Either Refinement NeedsInput
+refine :: Refined -> Either Refined NeedsInput
 refine (Refined calc)
   | null ins =   Left $ Refined (refineCalculation actives calc)
   | otherwise = Right $ NeedsInput calc actives
   where actives@(Actives ins _) = activeNodes calc
 
-continue :: Continue -> Refinement
+continue :: Continue -> Refined
 continue (Continue calc ops) =
   Refined (refineCalculation (Actives [] ops) calc)
 
@@ -238,7 +247,7 @@ nodeInput binding (IdCalc var out) = IdCalc var (out `append` binding var)
 refineInput :: (Var -> T2) -> (Ref, NodeCalc) -> Calculation -> Calculation
 refineInput binding (ref, node) = transform $ insert ref (nodeInput binding node)
 
-output :: Refinement -> [T2]
+output :: Refined -> [T2]
 output (Refined (Calc root nodes)) = outDigits $ nodeOutput (nodes!root)
 
 rootOffset :: Integral i => Expr -> i
