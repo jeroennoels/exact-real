@@ -64,7 +64,7 @@ data Calculation = Calc Ref (Map Ref NodeCalc)
 
 -- keep the root
 transform :: (Map Ref NodeCalc -> Map Ref NodeCalc) -> Calculation -> Calculation
-transform f (Calc root nodes) = Calc root (f nodes) 
+transform f (Calc root nodes) = Calc root (f nodes)
 
 -- IdCalc nodes are at the bottom of the DAG. They receive "input"
 -- from an external source.
@@ -88,7 +88,7 @@ antiConsumed :: Ref -> Pre -> Consumed
 antiConsumed ref (Pre n) = Consumed ref (-n)
 
 initNodeCalc :: Node -> Shift -> NodeCalc
-initNodeCalc (Id var) NoShift = IdCalc var initOut 
+initNodeCalc (Id var) NoShift = IdCalc var initOut
 initNodeCalc (Plus a b) (ShiftPlus _ p q) =
   PlusCalc (antiConsumed a p) (antiConsumed b q) Sa0 initOut
 initNodeCalc (Tims a b) _ =
@@ -126,7 +126,7 @@ type Actives = (ActiveIns, ActiveOps)
 consActive :: (Ref, NodeCalc) -> Actives -> Actives
 consActive node
   | isInput (snd node) = first (consIns node)
-  | otherwise = second (consOps node) 
+  | otherwise = second (consOps node)
 
 -- Node activation propagates top-down, so we start with the root.
 activesRoot :: Calculation -> Actives
@@ -136,7 +136,7 @@ activesRoot (Calc root nodes) = consActive (root, nodes!root) empty
 activeNodes :: Calculation -> Actives
 activeNodes calc@(Calc root nodes) =
   foldrWithKey' (curry accumulateActive) (activesRoot calc) unrooted
-  where unrooted = Map.delete root nodes 
+  where unrooted = Map.delete root nodes
 
 accumulateActive :: (Ref, NodeCalc) -> Actives -> Actives
 accumulateActive cand acc =
@@ -145,7 +145,7 @@ accumulateActive cand acc =
 
 activesAny :: ((Ref, NodeCalc) -> Bool) -> Actives -> Bool
 activesAny p (ActiveIns ins, ActiveOps ops) = any p ins || any p ops
-        
+
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
 child `activatedBy` PlusCalc a b _ _ = exhausted child a || exhausted child b
 child `activatedBy` TimsCalc a b _ _ = exhausted child a || exhausted child b
@@ -165,7 +165,7 @@ strictlyIncreasingRefs (ActiveOps ops) = strictlyIncreasing (map fst ops)
 -- Now we enter the bottom-up phase.
 
 consume :: Map Ref NodeCalc -> Consumed -> Maybe (T2, Consumed)
-consume nodes (Consumed a p) 
+consume nodes (Consumed a p)
   | p < 0 = Just (O0, done)
   | p < produced out = Just (out `digitAt` p, done)
   | otherwise = Nothing  -- exhausted
@@ -231,7 +231,7 @@ data Continue = Continue Calculation ActiveOps
 variables :: NeedsInput -> [Var]
 variables (NeedsInput _ (ActiveIns ins, _)) = map (extract . snd) ins
   where extract (IdCalc var _) = var
-        
+
 refine :: Refined -> Either Refined NeedsInput
 refine (Refined calc)
   | null ins =   Left $ Refined (refineCalculation ops calc)

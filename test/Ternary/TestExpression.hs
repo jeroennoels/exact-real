@@ -6,6 +6,7 @@ import Test.QuickCheck
 import Test.QuickCheck.Checkers hiding (Binop)
 import Control.Monad (liftM, liftM2, sequence)
 import Data.Map.Strict ((!))
+
 import Ternary.Core.Digit
 import Ternary.Arbitraries
 import Ternary.Util.Triad
@@ -15,26 +16,33 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 
-example :: Expr                 
+example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
                       (Ref 1, Plus (Ref 0) (Ref 0)),
                       (Ref 2, Tims (Ref 1) (Ref 1)),
-                      (Ref 3, Tims (Ref 2) (Ref 1))]
+                      (Ref 3, Plus (Ref 2) (Ref 2)),
+                      (Ref 4, Tims (Ref 3) (Ref 3)),
+                      (Ref 5, Plus (Ref 0) (Ref 0)),
+                      (Ref 6, Tims (Ref 5) (Ref 5)),
+                      (Ref 7, Plus (Ref 4) (Ref 6))]
 
 id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
 arbitraryNode n = liftM2 (binop `on` Ref) below below
-  where below = choose (0,n-1)
-        binop = if mod n 5 == 0 then Tims else Plus
+  where below = choose (0, n-1)
+        binop = if mod n 4 == 0 then Tims else Plus
 
 arbitraryRefNode :: Int -> Gen (Ref,Node)
 arbitraryRefNode n = return (Ref n) `pairM` arbitraryNode n
   where pairM = liftM2 (,)
-   
+
 arbitraryRefNodes :: Int -> Gen [(Ref,Node)]
 arbitraryRefNodes n = sequence $ return id0 : map arbitraryRefNode [1..n]
+
+-- To obtain an expression of arity 2, we must ensure both Id nodes
+-- are actually reachable from the root.
 
 arbitraryRefNodes2 :: Int -> Gen [(Ref,Node)]
 arbitraryRefNodes2 k = sequence list
@@ -51,14 +59,14 @@ pruneList list = recurse backwards [root]
   where (root:backwards) = sortBy (flip compare `on` fst) list
         recurse [] acc = acc
         recurse (a@(ref,node):rest) acc =
-          recurse rest $ if any (references ref) acc
+          recurse rest $ if any (references ref . snd) acc
                          then (a:acc) else acc
 
-references :: Ref -> (Ref,Node) -> Bool
-references ref (_, Plus a b) = ref == a || ref == b
-references ref (_, Tims a b) = ref == a || ref == b
-references ref (_, Id _) = False
-                         
+references :: Ref -> Node -> Bool
+references ref (Plus a b) = ref == a || ref == b
+references ref (Tims a b) = ref == a || ref == b
+references ref (Id _) = False
+
 -- Combine an expression and its pruned equivalent
 data Prune = Prune Expr Expr deriving Show
 
@@ -67,8 +75,8 @@ prune list = expression list `Prune` expression (pruneList list)
 
 prunedExpr :: Prune -> Expr
 prunedExpr (Prune x y) = y
-                  
-instance Arbitrary Prune where 
+
+instance Arbitrary Prune where
   arbitrary = prune `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes)
 
 instance Arbitrary Expr where
@@ -78,8 +86,8 @@ qcEvaluate :: Prune -> Bool
 qcEvaluate (Prune x y) = smartEval x (bind 1) == smartEval y (bind 1)
 
 qcActiveNodesBottomUp :: Expr -> Bool
-qcActiveNodesBottomUp = strictlyIncreasingRefs . snd . activeNodes . initCalc 
-                       
+qcActiveNodesBottomUp = strictlyIncreasingRefs . snd . activeNodes . initCalc
+
 expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
@@ -87,17 +95,17 @@ expressionTest = quickBatch $
     ("Finite evaluation 1", property qcEval),
     ("Finite evaluation 2", property qcEval2)])
 
-data Prune2 = Prune2 Expr Expr deriving Show
+data Expr2 = Expr2 Expr deriving Show
 
-prune2 :: [(Ref,Node)] -> Prune2
-prune2 list = expression list `Prune2` expression (pruneList list)
-                  
-instance Arbitrary Prune2 where 
-  arbitrary = prune2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
+expr2 :: [(Ref,Node)] -> Expr2
+expr2 = Expr2 . expression . pruneList
 
-qcEval2 :: Prune2 -> [T2] -> Bool
-qcEval2 (Prune2 _ expr) ds = qcEval expr ds
-  
+instance Arbitrary Expr2 where
+  arbitrary = expr2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
+
+qcEval2 :: Expr2 -> [T2] -> Bool
+qcEval2 (Expr2 expr) ds = qcEval expr ds
+
 qcEval :: Expr -> [T2] -> Bool
 qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
   where
@@ -108,12 +116,12 @@ qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
 
 -- Not maximally random but good enough for now.
 buildVarAssign :: Expr -> [T2] -> (VarAssign [T2], Binding Triad)
-buildVarAssign expr as = (map assign [0..n], binding) 
+buildVarAssign expr as = (map assign [0..n], binding)
   where
     n = arity expr - 1
     k = significantDigits expr (const (1 + length as))
     zeros = replicate (k+1) O0
-    digits i = drop i as ++ replicate (n-i) O0 
+    digits i = let (bs,cs) = splitAt i as in cs ++ bs  -- shuffle
     assign i = (Var i, digits i ++ zeros)
     binding (Var i) = phi (digits i)
 
