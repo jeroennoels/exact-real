@@ -7,13 +7,14 @@ import Data.Either
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map.Strict (Map, insert, foldrWithKey', intersectionWith, (!))
+import Control.Arrow (first, second)
 
 import Ternary.Core.Digit
 import Ternary.Core.Addition
 import Ternary.Core.Multiplication
 import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
-import Ternary.Util.Misc (strictlyIncreasing)
+import Ternary.Util.Misc (both, strictlyIncreasing)
 
 -- Because consumers may lag, each node needs to remember the complete
 -- output it has produced thus far.
@@ -111,17 +112,26 @@ initCalc x = Calc (rootRef x) calcMap
 -- separate lists of active nodes: one for input nodes (IdCalc) and one
 -- for operations (PlusCalc, TimsCalc).
 
-data Actives = Actives [(Ref, NodeCalc)] [(Ref, NodeCalc)]
-             deriving Show
+newtype ActiveIns = ActiveIns [(Ref, NodeCalc)] deriving Show
+newtype ActiveOps = ActiveOps [(Ref, NodeCalc)] deriving Show
+
+consIns :: (Ref, NodeCalc) -> ActiveIns -> ActiveIns
+consIns node (ActiveIns ins) = ActiveIns (node:ins)
+
+consOps :: (Ref, NodeCalc) -> ActiveOps -> ActiveOps
+consOps node (ActiveOps ops) = ActiveOps (node:ops)
+
+type Actives = (ActiveIns, ActiveOps)
 
 consActive :: (Ref, NodeCalc) -> Actives -> Actives
-consActive node (Actives ins ops)
-  | isInput (snd node) = Actives (node:ins) ops
-  | otherwise = Actives ins (node:ops)
+consActive node
+  | isInput (snd node) = first (consIns node)
+  | otherwise = second (consOps node) 
 
 -- Node activation propagates top-down, so we start with the root.
 activesRoot :: Calculation -> Actives
-activesRoot (Calc root nodes) = consActive (root, nodes!root) (Actives [] [])
+activesRoot (Calc root nodes) = consActive (root, nodes!root) empty
+  where empty = (ActiveIns [], ActiveOps [])
 
 activeNodes :: Calculation -> Actives
 activeNodes calc@(Calc root nodes) =
@@ -134,7 +144,7 @@ accumulateActive cand acc =
   where activated = activatedBy cand . snd
 
 activesAny :: ((Ref, NodeCalc) -> Bool) -> Actives -> Bool
-activesAny p (Actives ins ops) = any p ins || any p ops
+activesAny p (ActiveIns ins, ActiveOps ops) = any p ins || any p ops
         
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
 child `activatedBy` PlusCalc a b _ _ = exhausted child a || exhausted child b
@@ -149,8 +159,8 @@ exhausted (ref, child) (Consumed leg n) =
 -- fold.  Therefor the resulting list is ordered bottom-up.  Here we
 -- just provide the means to test this important property:
 
-strictlyIncreasingRefs :: Actives -> Bool
-strictlyIncreasingRefs (Actives _ ops) = strictlyIncreasing (map fst ops)
+strictlyIncreasingRefs :: ActiveOps -> Bool
+strictlyIncreasingRefs (ActiveOps ops) = strictlyIncreasing (map fst ops)
 
 -- Now we enter the bottom-up phase.
 
@@ -162,10 +172,6 @@ consume nodes (Consumed a p)
   where out = nodeOutput (nodes!a)
         done = Consumed a (p+1)
 
-
-both :: Maybe a -> Maybe b -> Maybe (a,b)
-both (Just a) (Just b) = Just (a,b)
-both _ _ = Nothing
 
 type DigitPairConsumed = ((T2, Consumed), (T2, Consumed))
 
@@ -199,7 +205,7 @@ refineOperation nodes
       let (w,new) = kernel (u,v) old
       in  w `seq` TimsCalc c d (Ready new) (append out w)
 --
-refineOperation _ _ = error "New input is needed to refine an Id node"
+refineOperation _ _ = error "Ternary.Sampling.Calculation (refineOperation)"
 
 
 refineNode :: Map Ref NodeCalc -> (Ref, NodeCalc) -> Map Ref NodeCalc
@@ -211,34 +217,32 @@ refineNode acc (ref,node) = insert ref (refineOperation acc node) acc
 -- because the outputs of these refinements will be consumed during
 -- some subsequent refinement within the same traversal.
 
-refineCalculation :: Actives -> Calculation -> Calculation
-refineCalculation (Actives ins ops) calc@(Calc root nodes)
-  | null ins = Calc root (foldl' refineNode nodes ops)
-  | otherwise = error "refineCalculation: active inputs"
+refineCalculation :: ActiveOps -> Calculation -> Calculation
+refineCalculation (ActiveOps ops) = transform $ \nodes ->
+  foldl' refineNode nodes ops
 
 -- When there are active input nodes, the calculation must be
 -- interrupted to provide the input needed to continue:
 
 newtype Refined = Refined Calculation
 data NeedsInput = NeedsInput Calculation Actives
-data Continue = Continue Calculation [(Ref, NodeCalc)] 
+data Continue = Continue Calculation ActiveOps
 
 variables :: NeedsInput -> [Var]
-variables (NeedsInput _ (Actives ins _)) = map (extract . snd) ins
+variables (NeedsInput _ (ActiveIns ins, _)) = map (extract . snd) ins
   where extract (IdCalc var _) = var
         
 refine :: Refined -> Either Refined NeedsInput
 refine (Refined calc)
-  | null ins =   Left $ Refined (refineCalculation actives calc)
+  | null ins =   Left $ Refined (refineCalculation ops calc)
   | otherwise = Right $ NeedsInput calc actives
-  where actives@(Actives ins _) = activeNodes calc
+  where actives@(ActiveIns ins, ops) = activeNodes calc
 
 continue :: Continue -> Refined
-continue (Continue calc ops) =
-  Refined (refineCalculation (Actives [] ops) calc)
+continue (Continue calc ops) = Refined (refineCalculation ops calc)
 
 provideInput :: (Var -> T2) -> NeedsInput -> Continue
-provideInput binding (NeedsInput calc (Actives ins ops)) =
+provideInput binding (NeedsInput calc (ActiveIns ins, ops)) =
   Continue (foldl' (flip $ refineInput binding) calc ins) ops
 
 nodeInput :: (Var -> T2) -> NodeCalc -> NodeCalc
