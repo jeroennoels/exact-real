@@ -128,15 +128,18 @@ consActive node
   | isInput (snd node) = first (consIns node)
   | otherwise = second (consOps node)
 
--- Node activation propagates top-down, so we start with the root.
-activesRoot :: Calculation -> Actives
-activesRoot (Calc root nodes) = consActive (root, nodes!root) empty
+-- Node activation propagates top-down, so we start with the top.
+activesTop :: Calculation -> Ref -> Actives
+activesTop (Calc _ nodes) top = consActive (top, nodes!top) empty
   where empty = (ActiveIns [], ActiveOps [])
 
-activeNodes :: Calculation -> Actives
-activeNodes calc@(Calc root nodes) =
-  foldrWithKey' (curry accumulateActive) (activesRoot calc) unrooted
-  where unrooted = Map.delete root nodes
+activeNodes :: Calculation -> Ref -> Actives
+activeNodes calc@(Calc root nodes) top
+  | root == top = go nodes -- no need to split the map
+  | otherwise   = go topdown
+  where
+    go = foldrWithKey' (curry accumulateActive) (activesTop calc top)
+    topdown = fst $ Map.split top nodes -- top is excluded: not important here
 
 accumulateActive :: (Ref, NodeCalc) -> Actives -> Actives
 accumulateActive cand acc =
@@ -232,11 +235,11 @@ variables :: NeedsInput -> [Var]
 variables (NeedsInput _ (ActiveIns ins, _)) = map (extract . snd) ins
   where extract (IdCalc var _) = var
 
-refine :: Refined -> Either Refined NeedsInput
-refine (Refined calc)
+refine :: Refined -> Ref -> Either Refined NeedsInput
+refine (Refined calc) top
   | null ins =   Left $ Refined (refineCalculation ops calc)
   | otherwise = Right $ NeedsInput calc actives
-  where actives@(ActiveIns ins, ops) = activeNodes calc
+  where actives@(ActiveIns ins, ops) = activeNodes calc top
 
 continue :: Continue -> Refined
 continue (Continue calc ops) = Refined (refineCalculation ops calc)

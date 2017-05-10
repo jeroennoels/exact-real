@@ -18,7 +18,7 @@ evalFinite expr = recurse $ Refined (initCalc expr)
   where
     recurse refinement lists | inputExhausted lists = output refinement
     recurse refinement lists =
-      case refine refinement of
+      case refine refinement (rootRef expr) of
        Left done -> recurse done lists
        Right ask -> recurse (continue (provideInput heads ask)) tails
          where (heads, tails) = unconsInputs lists (variables ask)

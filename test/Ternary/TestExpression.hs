@@ -86,8 +86,9 @@ qcEvaluate :: Prune -> Bool
 qcEvaluate (Prune x y) = smartEval x (bind 1) == smartEval y (bind 1)
 
 qcActiveNodesBottomUp :: Expr -> Bool
-qcActiveNodesBottomUp = strictlyIncreasingRefs . snd . activeNodes . initCalc
-
+qcActiveNodesBottomUp = strictlyIncreasingRefs . snd . actives . initCalc
+   where actives calc@(Calc root _) = activeNodes calc root
+         
 expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
