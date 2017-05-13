@@ -35,7 +35,7 @@ iteration :: Int -> [(Ref, Node)]
 iteration k =
   [(rel 2, Tims (rel 0) (rel 0)),  --  x^2
    (rel 3, Tims (rel 1) (rel 1)),  --  y^2
-   (rel 4, Minus (rel 3)),         -- -y^2 
+   (rel 4, Mins (rel 3)),          -- -y^2 
    (rel 5, Plus (rel 2) (rel 4)),  --  x^2 - y^2
    (rel 6, Tims (rel 0) (rel 1)),  --  x*y 
    (rel 7, Plus (rel 6) (rel 6)),  --  2*x*y
@@ -43,4 +43,3 @@ iteration k =
    (rel 9, Plus (rel 7) (Ref 1))]  --  new y
   where
     rel = absoluteRef k
-    
