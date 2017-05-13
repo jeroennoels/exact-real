@@ -11,6 +11,7 @@ import Data.List (sort)
 import Data.Map.Strict (Map, (!), insert, empty, fromList, foldlWithKey', findMax)
 import qualified Data.Map.Strict as Map
 
+
 -- To keep it simple, the variables of an expression of arity n are
 -- labeled by numbers from 0 to n-1.
 newtype Var = Var Int deriving (Eq, Ord, Show)
@@ -107,9 +108,9 @@ expression assoc = nodesMap `seq` verifiedArity `seq` Expr {
     nodesMap = fromList $ assertTopologicallySorted assoc
 
 -- A small graph can represent a big tree.  Beware the fibonacci trap!
-extreme :: Int -> Expr
-extreme depth = expression assoc
-  where pair i = (Ref (i+1), Plus (Ref i) (Ref i))
+extreme :: (Ref -> Ref -> Node) -> Int -> Expr
+extreme binop depth = expression assoc
+  where pair i = (Ref (i+1), binop (Ref i) (Ref i))
         assoc = (Ref 0, Id (Var 0)) : map pair [0..depth-1]
 
 -- Scan the map in ascending key order.  Build a new map with exactly
@@ -135,8 +136,8 @@ smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
         eval m (Mins a) = -m!a
         eval _ (Id var) = binding var
 
-slowEvalExample = naiveEval (extreme 30) (bind 1)    -- takes forever
-fastEvalExample = smartEval (extreme 1000) (bind 1)  -- no problem
+slowEvalExample = naiveEval (extreme Plus 30) (bind 1)    -- takes forever
+fastEvalExample = smartEval (extreme Plus 1000) (bind 1)  -- no problem
 
 
 offset :: Integral i => Shift -> i
