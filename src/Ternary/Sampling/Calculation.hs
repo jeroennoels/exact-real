@@ -55,6 +55,7 @@ data Consumed = Consumed Ref Int deriving Show
 -- data that represents a calculation in progress.
 
 data NodeCalc = IdCalc Var Out
+              | MinsCalc Consumed Out
               | PlusCalc Consumed Consumed Sa Out
               | TimsCalc Consumed Consumed Sm Out
               deriving Show
@@ -76,6 +77,7 @@ isInput _ = False
 nodeOutput :: NodeCalc -> Out
 nodeOutput (PlusCalc _ _ _ out) = out
 nodeOutput (TimsCalc _ _ _ out) = out
+nodeOutput (MinsCalc _ out) = out
 nodeOutput (IdCalc _ out) = out
 
 -- Remember that addition needs to prepend a certain number of zeros
@@ -88,7 +90,8 @@ antiConsumed :: Ref -> Pre -> Consumed
 antiConsumed ref (Pre n) = Consumed ref (-n)
 
 initNodeCalc :: Node -> Shift -> NodeCalc
-initNodeCalc (Id var) NoShift = IdCalc var initOut
+initNodeCalc (Id var) _ = IdCalc var initOut
+initNodeCalc (Mins a) _ = MinsCalc (Consumed a 0) initOut
 initNodeCalc (Plus a b) (ShiftPlus _ p q) =
   PlusCalc (antiConsumed a p) (antiConsumed b q) Sa0 initOut
 initNodeCalc (Tims a b) _ =
@@ -110,7 +113,7 @@ initCalc x = Calc (rootRef x) calcMap
 -- A node is active when it cannot currently deliver the output that
 -- is needed for the calculation to make progress.  We shall build two
 -- separate lists of active nodes: one for input nodes (IdCalc) and one
--- for operations (PlusCalc, TimsCalc).
+-- for operations (PlusCalc, TimsCalc, etc.)
 
 newtype ActiveIns = ActiveIns [(Ref, NodeCalc)] deriving Show
 newtype ActiveOps = ActiveOps [(Ref, NodeCalc)] deriving Show
@@ -129,6 +132,8 @@ consActive node
   | otherwise = second (consOps node)
 
 -- Node activation propagates top-down, so we start with the top.
+-- Nota bene: the top can be any node, the root is not that special!
+
 activesTop :: Calculation -> Ref -> Actives
 activesTop (Calc _ nodes) top = consActive (top, nodes!top) empty
   where empty = (ActiveIns [], ActiveOps [])
@@ -152,6 +157,7 @@ activesAny p (ActiveIns ins, ActiveOps ops) = any p ins || any p ops
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
 child `activatedBy` PlusCalc a b _ _ = exhausted child a || exhausted child b
 child `activatedBy` TimsCalc a b _ _ = exhausted child a || exhausted child b
+child `activatedBy` MinsCalc a _ = exhausted child a
 child `activatedBy` IdCalc _ _ = False
 
 exhausted :: (Ref, NodeCalc) -> Consumed -> Bool
@@ -183,6 +189,12 @@ consume2 nodes a b = both (consume nodes a) (consume nodes b)
 
 
 refineOperation :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
+--
+refineOperation nodes
+  orig@(MinsCalc a out) = maybe orig result (consume nodes a)
+  where
+    result :: (T2, Consumed) -> NodeCalc
+    result (u,c) = MinsCalc c (out `append` negateT2 u)
 --
 refineOperation nodes
   orig@(PlusCalc a b old out) = maybe orig result (consume2 nodes a b)
@@ -254,8 +266,8 @@ nodeInput binding (IdCalc var out) = IdCalc var (out `append` binding var)
 refineInput :: (Var -> T2) -> (Ref, NodeCalc) -> Calculation -> Calculation
 refineInput binding (ref, node) = transform $ insert ref (nodeInput binding node)
 
-output :: Refined -> [T2]
-output (Refined (Calc root nodes)) = outDigits $ nodeOutput (nodes!root)
+output :: Ref -> Refined -> [T2]
+output ref (Refined (Calc _ nodes)) = outDigits $ nodeOutput (nodes!ref)
 
-rootOffset :: Integral i => Expr -> i
-rootOffset x = offset (shifts x ! rootRef x)
+nodeOffset :: Integral i => Expr -> Ref -> i
+nodeOffset x ref = offset (shifts x ! ref)

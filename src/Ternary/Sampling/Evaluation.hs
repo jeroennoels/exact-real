@@ -13,12 +13,12 @@ type VarAssign a = [(Var, a)]
 unsafeBind :: VarAssign a -> Binding a
 unsafeBind assoc var = fromJust (lookup var assoc)
 
-evalFinite :: Expr -> VarAssign [T2] -> [T2]
-evalFinite expr = recurse $ Refined (initCalc expr)
+evalFinite :: Expr -> Ref -> VarAssign [T2] -> [T2]
+evalFinite expr top = recurse $ Refined (initCalc expr)
   where
-    recurse refinement lists | inputExhausted lists = output refinement
+    recurse refinement lists | inputExhausted lists = output top refinement
     recurse refinement lists =
-      case refine refinement (rootRef expr) of
+      case refine refinement top of
        Left done -> recurse done lists
        Right ask -> recurse (continue (provideInput heads ask)) tails
          where (heads, tails) = unconsInputs lists (variables ask)
@@ -40,5 +40,4 @@ unconsInputs assoc vars = (binding, map consumed assoc)
       | var `elem` vars = head $ fromJust (lookup var assoc)
 
 evalFinite1 :: Expr -> [T2] -> [T2]
-evalFinite1 expr x = evalFinite expr [(Var 0, x)]
-
+evalFinite1 expr x = evalFinite expr (rootRef expr) [(Var 0, x)]

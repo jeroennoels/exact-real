@@ -30,7 +30,9 @@ id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
-arbitraryNode n = liftM2 (binop `on` Ref) below below
+arbitraryNode n
+  | mod n 5 == 0 = liftM (Mins . Ref) below
+  | otherwise = liftM2 (binop `on` Ref) below below
   where below = choose (0, n-1)
         binop = if mod n 4 == 0 then Tims else Plus
 
@@ -65,6 +67,7 @@ pruneList list = recurse backwards [root]
 references :: Ref -> Node -> Bool
 references ref (Plus a b) = ref == a || ref == b
 references ref (Tims a b) = ref == a || ref == b
+references ref (Mins a) = ref == a
 references ref (Id _) = False
 
 -- Combine an expression and its pruned equivalent
@@ -88,7 +91,7 @@ qcEvaluate (Prune x y) = smartEval x (bind 1) == smartEval y (bind 1)
 qcActiveNodesBottomUp :: Expr -> Bool
 qcActiveNodesBottomUp = strictlyIncreasingRefs . snd . actives . initCalc
    where actives calc@(Calc root _) = activeNodes calc root
-         
+
 expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
@@ -112,8 +115,9 @@ qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
   where
     direct = smartEval expr binding
     (va, binding) = buildVarAssign expr ds
-    p = rootOffset expr
-    result = Exact (evalFinite expr va) p
+    root = rootRef expr
+    p = nodeOffset expr root 
+    result = Exact (evalFinite expr root va) p
 
 -- Not maximally random but good enough for now.
 buildVarAssign :: Expr -> [T2] -> (VarAssign [T2], Binding Triad)
@@ -131,4 +135,5 @@ significantDigits :: (Ord a, Num a) => Expr -> Binding a -> a
 significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
   where eval m (Plus a b) = 1 + max (m!a) (m!b)
         eval m (Tims a b) = 1 + m!a + m!b
+        eval m (Mins a) = m!a
         eval _ (Id var) = binding var

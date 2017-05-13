@@ -29,6 +29,7 @@ bindAll values (Var i) = values !! i
 newtype Ref = Ref Int deriving (Eq, Ord, Show)
 
 data Node = Id Var
+          | Mins Ref
           | Plus Ref Ref
           | Tims Ref Ref
           deriving Show
@@ -52,6 +53,7 @@ newtype Pre = Pre Int deriving Show
 data Shift = NoShift
            | ShiftPlus Off Pre Pre
            | ShiftTims Off
+           | ShiftMins Off
            deriving Show
 
 data Expr = Expr {
@@ -66,6 +68,7 @@ data Expr = Expr {
 monotonic :: (Ref, Node) -> Bool
 monotonic (c, Plus a b) = a < c && b < c
 monotonic (c, Tims a b) = a < c && b < c
+monotonic (c, Mins a) = a < c
 monotonic (_, Id _) = True
 
 -- We will do a lot of folding over the (Map Ref Node) that defines an
@@ -120,6 +123,7 @@ naiveEval :: Num a => Expr -> Binding a -> a
 naiveEval (Expr _ root nodes _) binding = eval (nodes!root)
   where eval (Plus a b) = eval (nodes!a) + eval (nodes!b)
         eval (Tims a b) = eval (nodes!a) * eval (nodes!b)
+        eval (Mins a) = - eval (nodes!a)
         eval (Id var) = binding var
 
 -- Using the mapScanL combinator is easy and efficient.  It works
@@ -128,6 +132,7 @@ smartEval :: Num a => Expr -> Binding a -> a
 smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
   where eval m (Plus a b) = m!a + m!b
         eval m (Tims a b) = m!a * m!b
+        eval m (Mins a) = -m!a
         eval _ (Id var) = binding var
 
 slowEvalExample = naiveEval (extreme 30) (bind 1)    -- takes forever
@@ -137,6 +142,7 @@ fastEvalExample = smartEval (extreme 1000) (bind 1)  -- no problem
 offset :: Integral i => Shift -> i
 offset (ShiftPlus (Off p) _ _) = fromIntegral p
 offset (ShiftTims (Off p)) = fromIntegral p
+offset (ShiftMins (Off p)) = fromIntegral p
 offset NoShift = 0
 
 -- See Ternary.List.Exact (addExact)
@@ -157,4 +163,5 @@ toShifts :: Map Ref Node -> Map Ref Shift
 toShifts = mapScanL shift
   where shift m (Plus a b) = shiftPlus (m!a) (m!b)
         shift m (Tims a b) = shiftTims (m!a) (m!b)
-        shift _ (Id _) = NoShift
+        shift m (Mins a) = m!a
+        shift _ _ = NoShift
