@@ -207,7 +207,13 @@ refineOperation nodes
 refineOperation nodes
   orig@(TimsCalc a b Loading out) = maybe orig result (consume2 nodes a b)
   where
+    -- When we encounter leading zeros, we propagate them to the
+    -- output and the node can stay in the loading phase.  This
+    -- reduces the size of the multiplication state!
     result :: DigitPairConsumed -> NodeCalc
+    result ((O0,c),(O0,d)) = TimsCalc c d Loading (out `append` O0 `append` O0)
+    result ((O0,c),_) = TimsCalc c b Loading (out `append` O0)
+    result (_,(O0,d)) = TimsCalc a d Loading (out `append` O0)
     result ((u,c),(v,d)) =
       let new = initialMultiplicationState (TriangleParam u v)
       in TimsCalc c d (Ready new) out
