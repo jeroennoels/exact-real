@@ -18,13 +18,8 @@ import Ternary.Sampling.Evaluation
 
 example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
-                      (Ref 1, Plus (Ref 0) (Ref 0)),
-                      (Ref 2, Tims (Ref 1) (Ref 1)),
-                      (Ref 3, Plus (Ref 2) (Ref 2)),
-                      (Ref 4, Tims (Ref 3) (Ref 3)),
-                      (Ref 5, Plus (Ref 0) (Ref 0)),
-                      (Ref 6, Tims (Ref 5) (Ref 5)),
-                      (Ref 7, Plus (Ref 4) (Ref 6))]
+                      (Ref 1, Tims (Ref 0) (Ref 0)),
+                      (Ref 2, Plus (Ref 0) (Ref 1))]
 
 id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))

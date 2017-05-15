@@ -1,4 +1,4 @@
-module Ternary.TestExpression where
+module Ternary.Mandelbrot where
 
 import Ternary.Core.Digit
 import Ternary.List.Exact

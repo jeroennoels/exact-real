@@ -8,7 +8,7 @@ import Ternary.Exhaust (exhaustiveTest, exhaustMultiplication)
 import Ternary.TestCompiler (compilerTest)
 import Ternary.Examples ()
 import Ternary.TestExpression (expressionTest)
-
+import Ternary.Mandelbrot
 
 main = getArgs >>= run >> putStrLn ""
 
@@ -17,6 +17,7 @@ run ["f"] = fastTest
 run ["p"] = performanceTest
 run ["w"] = whiteBoxTest
 run ["e"] = exhaustiveTest
+run ["m"] = mandelbrotTest
 run ["exp"] = expressionTest
 run _ = evalPerformance
 
@@ -28,3 +29,5 @@ allTests = do
   exhaustMultiplication 3
   performanceTest
   expressionTest
+
+mandelbrotTest = print (mandelbrot 3)
