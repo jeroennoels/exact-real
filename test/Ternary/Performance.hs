@@ -56,5 +56,7 @@ timeExpressionEval expr as = do
     binding = bind (Exact as 0)
     time list = timeIt (forceElementsIO list >> return (length list))
     
-evalPerformance = timeExpressionEval (extreme Plus 20000) (take 5 $ randomT2s 0)
+evalPerformance = do
+  timeExpressionEval (extreme Mins 20000) (take 5 $ randomT2s 0)
+  timeExpressionEval (extreme Plus 60) (take 8000 $ randomT2s 0)
 

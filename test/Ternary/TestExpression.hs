@@ -16,6 +16,9 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 
+import System.IO.Unsafe
+
+
 example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
                       (Ref 1, Tims (Ref 0) (Ref 0)),
@@ -25,11 +28,9 @@ id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))
 
 arbitraryNode :: Int -> Gen Node
-arbitraryNode n
-  | mod n 5 == 0 = liftM (Mins . Ref) below
-  | otherwise = liftM2 (binop `on` Ref) below below
+arbitraryNode n = liftM2 (binop `on` Ref) below below
   where below = choose (0, n-1)
-        binop = if mod n 4 == 0 then Tims else Plus
+        binop = [Plus, Mins, Tims, Plus] !! mod n 4
 
 arbitraryRefNode :: Int -> Gen (Ref,Node)
 arbitraryRefNode n = return (Ref n) `pairM` arbitraryNode n
@@ -61,8 +62,8 @@ pruneList list = recurse backwards [root]
 
 references :: Ref -> Node -> Bool
 references ref (Plus a b) = ref == a || ref == b
+references ref (Mins a b) = ref == a || ref == b
 references ref (Tims a b) = ref == a || ref == b
-references ref (Mins a) = ref == a
 references ref (Id _) = False
 
 -- Combine an expression and its pruned equivalent
@@ -91,6 +92,7 @@ expressionTest = quickBatch $
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
     ("Active nodes", property qcActiveNodesBottomUp),
+    ("smart vs. naive eval", property $ qcSmartEval (bind 1)),
     ("Finite evaluation 1", property qcEval),
     ("Finite evaluation 2", property qcEval2)])
 
@@ -128,7 +130,9 @@ buildVarAssign expr as = (map assign [0..n], binding)
 
 significantDigits :: (Ord a, Num a) => Expr -> Binding a -> a
 significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
-  where eval m (Plus a b) = 1 + max (m!a) (m!b)
-        eval m (Tims a b) = 1 + m!a + m!b
-        eval m (Mins a) = m!a
-        eval _ (Id var) = binding var
+  where
+    onPlusMin m a b = 1 + max (m!a) (m!b)
+    eval m (Plus a b) = onPlusMin m a b
+    eval m (Mins a b) = onPlusMin m a b
+    eval m (Tims a b) = 1 + m!a + m!b
+    eval _ (Id var) = binding var

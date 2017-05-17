@@ -4,7 +4,8 @@ module Ternary.Sampling.Expression (
   Ref(Ref), Pre(Pre), Off(Off), Var(Var),
   Expr(), Node(..), Shift(..), Binding,
   expression, arity, nodes, shifts, rootRef, offset,
-  mapScanL, extreme, smartEval, bind, bindAll) where
+  mapScanL, extreme, smartEval, bind, bindAll,
+  qcSmartEval) where
 
 import Data.Maybe (fromJust, mapMaybe)
 import Data.List (sort)
@@ -30,7 +31,7 @@ bindAll values (Var i) = values !! i
 newtype Ref = Ref Int deriving (Eq, Ord, Show)
 
 data Node = Id Var
-          | Mins Ref
+          | Mins Ref Ref
           | Plus Ref Ref
           | Tims Ref Ref
           deriving Show
@@ -52,9 +53,8 @@ newtype Pre = Pre Int deriving Show
 -- Offsets and prefixes follow the structure of the expression.
 
 data Shift = NoShift
-           | ShiftPlus Off Pre Pre
+           | ShiftPlusMin Off Pre Pre
            | ShiftTims Off
-           | ShiftMins Off
            deriving Show
 
 data Expr = Expr {
@@ -66,10 +66,13 @@ data Expr = Expr {
 -- The parent reference must be greater than its child references.
 -- Thus the graph is acyclic and the nodes are topologically sorted.
 
+monotonic2 :: Ref -> Ref -> Ref -> Bool
+monotonic2 a b p = a < p && b < p
+
 monotonic :: (Ref, Node) -> Bool
-monotonic (c, Plus a b) = a < c && b < c
-monotonic (c, Tims a b) = a < c && b < c
-monotonic (c, Mins a) = a < c
+monotonic (c, Plus a b) = monotonic2 a b c
+monotonic (c, Mins a b) = monotonic2 a b c
+monotonic (c, Tims a b) = monotonic2 a b c
 monotonic (_, Id _) = True
 
 -- We will do a lot of folding over the (Map Ref Node) that defines an
@@ -122,33 +125,37 @@ mapScanL f = foldlWithKey' op empty
 -- The naive top-down recursion does not take advantage of sharing.
 naiveEval :: Num a => Expr -> Binding a -> a
 naiveEval (Expr _ root nodes _) binding = eval (nodes!root)
-  where eval (Plus a b) = eval (nodes!a) + eval (nodes!b)
-        eval (Tims a b) = eval (nodes!a) * eval (nodes!b)
-        eval (Mins a) = - eval (nodes!a)
-        eval (Id var) = binding var
+  where
+    lift (#) a b = eval (nodes!a) # eval (nodes!b)
+    eval (Plus a b) = lift (+) a b
+    eval (Mins a b) = lift (-) a b
+    eval (Tims a b) = lift (*) a b
+    eval (Id var) = binding var
 
 -- Using the mapScanL combinator is easy and efficient.  It works
 -- because the nodes are ordered, bottom-up.
 smartEval :: Num a => Expr -> Binding a -> a
 smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
-  where eval m (Plus a b) = m!a + m!b
-        eval m (Tims a b) = m!a * m!b
-        eval m (Mins a) = -m!a
-        eval _ (Id var) = binding var
+  where
+    eval m (Plus a b) = m!a + m!b
+    eval m (Mins a b) = m!a - m!b
+    eval m (Tims a b) = m!a * m!b
+    eval _ (Id var) = binding var
 
 slowEvalExample = naiveEval (extreme Plus 30) (bind 1)    -- takes forever
 fastEvalExample = smartEval (extreme Plus 1000) (bind 1)  -- no problem
 
+qcSmartEval :: (Eq a, Num a) => Binding a -> Expr -> Bool
+qcSmartEval b x = naiveEval x b == smartEval x b
 
 offset :: Integral i => Shift -> i
-offset (ShiftPlus (Off p) _ _) = fromIntegral p
+offset (ShiftPlusMin (Off p) _ _) = fromIntegral p
 offset (ShiftTims (Off p)) = fromIntegral p
-offset (ShiftMins (Off p)) = fromIntegral p
 offset NoShift = 0
 
 -- See Ternary.List.Exact (addExact)
-shiftPlus :: Shift -> Shift -> Shift
-shiftPlus sx sy = ShiftPlus (Off (s+1)) (Pre (s-p)) (Pre (s-q))
+shiftPlusMin :: Shift -> Shift -> Shift
+shiftPlusMin sx sy = ShiftPlusMin (Off (s+1)) (Pre (s-p)) (Pre (s-q))
   where p = offset sx
         q = offset sy
         s = max p q
@@ -162,7 +169,8 @@ shiftTims sx sy = ShiftTims (Off (p+q+1))
 -- Remember this only works if the nodes are ordered, bottom up.
 toShifts :: Map Ref Node -> Map Ref Shift
 toShifts = mapScanL shift
-  where shift m (Plus a b) = shiftPlus (m!a) (m!b)
-        shift m (Tims a b) = shiftTims (m!a) (m!b)
-        shift m (Mins a) = m!a
-        shift _ _ = NoShift
+  where
+    shift m (Plus a b) = shiftPlusMin (m!a) (m!b)
+    shift m (Mins a b) = shiftPlusMin (m!a) (m!b)
+    shift m (Tims a b) = shiftTims (m!a) (m!b)
+    shift _ _ = NoShift

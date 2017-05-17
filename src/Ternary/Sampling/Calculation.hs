@@ -54,9 +54,13 @@ data Consumed = Consumed Ref Int deriving Show
 -- The nodes and edges of the graph structure are annotated with the
 -- data that represents a calculation in progress.
 
+newtype OnSecond = OnSecond (T2 -> T2)
+
+instance Show OnSecond where
+  show (OnSecond f) = "OnSecond(P1->" ++ show (f P1) ++ ")"
+
 data NodeCalc = IdCalc Var Out
-              | MinsCalc Consumed Out
-              | PlusCalc Consumed Consumed Sa Out
+              | PlusCalc Consumed Consumed Sa Out OnSecond
               | TimsCalc Consumed Consumed Sm Out
               deriving Show
 
@@ -75,9 +79,8 @@ isInput (IdCalc _ _) = True
 isInput _ = False
 
 nodeOutput :: NodeCalc -> Out
-nodeOutput (PlusCalc _ _ _ out) = out
+nodeOutput (PlusCalc _ _ _ out _) = out
 nodeOutput (TimsCalc _ _ _ out) = out
-nodeOutput (MinsCalc _ out) = out
 nodeOutput (IdCalc _ out) = out
 
 -- Remember that addition needs to prepend a certain number of zeros
@@ -89,13 +92,16 @@ nodeOutput (IdCalc _ out) = out
 antiConsumed :: Ref -> Pre -> Consumed
 antiConsumed ref (Pre n) = Consumed ref (-n)
 
+
+initPlusMinNodeCalc :: Ref -> Ref -> Shift -> (T2 -> T2) -> NodeCalc
+initPlusMinNodeCalc a b (ShiftPlusMin _ p q) f =
+  PlusCalc (antiConsumed a p) (antiConsumed b q) Sa0 initOut (OnSecond f)
+
 initNodeCalc :: Node -> Shift -> NodeCalc
 initNodeCalc (Id var) _ = IdCalc var initOut
-initNodeCalc (Mins a) _ = MinsCalc (Consumed a 0) initOut
-initNodeCalc (Plus a b) (ShiftPlus _ p q) =
-  PlusCalc (antiConsumed a p) (antiConsumed b q) Sa0 initOut
-initNodeCalc (Tims a b) _ =
-  TimsCalc (Consumed a 0) (Consumed b 0) Loading initOut
+initNodeCalc (Plus a b) shift = initPlusMinNodeCalc a b shift id
+initNodeCalc (Mins a b) shift = initPlusMinNodeCalc a b shift negateT2
+initNodeCalc (Tims a b) _ = TimsCalc (Consumed a 0) (Consumed b 0) Loading initOut
 
 initCalc :: Expr -> Calculation
 initCalc x = Calc (rootRef x) calcMap
@@ -155,9 +161,8 @@ activesAny :: ((Ref, NodeCalc) -> Bool) -> Actives -> Bool
 activesAny p (ActiveIns ins, ActiveOps ops) = any p ins || any p ops
 
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
-child `activatedBy` PlusCalc a b _ _ = exhausted child a || exhausted child b
-child `activatedBy` TimsCalc a b _ _ = exhausted child a || exhausted child b
-child `activatedBy` MinsCalc a _ = exhausted child a
+child `activatedBy` PlusCalc a b _ _ _ = exhausted child a || exhausted child b
+child `activatedBy` TimsCalc a b _ _   = exhausted child a || exhausted child b
 child `activatedBy` IdCalc _ _ = False
 
 exhausted :: (Ref, NodeCalc) -> Consumed -> Bool
@@ -191,18 +196,13 @@ consume2 nodes a b = both (consume nodes a) (consume nodes b)
 refineOperation :: Map Ref NodeCalc -> NodeCalc -> NodeCalc
 --
 refineOperation nodes
-  orig@(MinsCalc a out) = maybe orig result (consume nodes a)
-  where
-    result :: (T2, Consumed) -> NodeCalc
-    result (u,c) = MinsCalc c (out `append` negateT2 u)
---
-refineOperation nodes
-  orig@(PlusCalc a b old out) = maybe orig result (consume2 nodes a b)
+  orig@(PlusCalc a b old out onSecond) = maybe orig result (consume2 nodes a b)
   where
     result :: DigitPairConsumed -> NodeCalc
     result ((u,c),(v,d)) =
-      let (w,new) = plus (addT2 u v) old
-      in w `seq` PlusCalc c d new (append out w)
+      let OnSecond f = onSecond
+          (w,new) = plus (addT2 u (f v)) old
+      in w `seq` PlusCalc c d new (append out w) onSecond
 --
 refineOperation nodes
   orig@(TimsCalc a b Loading out) = maybe orig result (consume2 nodes a b)
