@@ -1,14 +1,25 @@
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Ternary.Exhaust (exhaustMultiplication, exhaustiveTest) where
 
 import Control.Monad (liftM2)
+import Control.Arrow ((***))
 
 import Ternary.Compiler.ArrayLookup (warmup)
 import Ternary.QuickCheckUtil (assert)
 import Ternary.Util.Misc (Binop)
-import Ternary.Core.Digit (T2, allT2)
+import Ternary.Core.Digit
+import Ternary.Core.Normalize
 import Ternary.List.Exact (Exact(Exact))
 import Ternary.List.FiniteExact
 
+import Test.SmallCheck
+import Test.SmallCheck.Series
+
+instance Monad m => Serial m T1 where
+  series = generate $ const [M,O,P]
+
+instance Monad m => Serial m T2 where
+  series = generate $ const allT2
 
 nDigits :: Int -> [[T2]]
 nDigits n = sequence $ replicate n allT2
@@ -34,4 +45,14 @@ exhaustMultiplication :: Int -> IO ()
 exhaustMultiplication depth = assert desc (checkAllCombinations depth)
   where desc = "\nExhaust multiplication to depth " ++ show depth
 
-exhaustiveTest = warmup >> exhaustMultiplication 4
+exhaustiveTest = do
+  smallCheck 0 scNormalize
+  warmup
+  exhaustMultiplication 4
+
+-- normalize a b = (c,d) means a+3b = c+d
+scNormalize :: T2 -> T1 -> Bool
+scNormalize r s = a*b > 0 || a+3*b == c+d
+  where a = fromT2 r
+        b = fromT1 s
+        (c,d) = fromT2 *** fromT1 $ normalize r s
