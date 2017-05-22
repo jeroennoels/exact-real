@@ -1,7 +1,7 @@
-module Ternary.Core.Normalize (normalize) where
+module Ternary.Core.Normalize where
 
-import Ternary.Core.Kernel (Kernel)
-import Ternary.Core.Digit (T1(..), T2(..))
+import Ternary.Core.Kernel (Kernel, iterateKernel)
+import Ternary.Core.Digit (T1(..), T2(..), coerceT1)
 
 -- normalize a b = (c,d) means a+3b = c+d, or bottom when a and b are
 -- both positive or both negative.
@@ -15,3 +15,10 @@ normalize P2 M = (M1,O)
 normalize P1 M = (M2,O)
 normalize O0 M = (M2,M)
 normalize _ _ = error "cannot normalize"
+
+initNormalize :: [T2] -> [T1]
+initNormalize = go . reverse
+  where
+    go [] = []
+    go (a:as) = let (c,bs) = iterateKernel normalize (length as) a (go as)
+                in bs ++ [coerceT1 c]

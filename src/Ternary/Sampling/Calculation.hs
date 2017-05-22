@@ -10,7 +10,9 @@ import Data.Map.Strict (Map, insert, foldrWithKey', intersectionWith, (!))
 import Control.Arrow (first, second)
 
 import Ternary.Core.Digit
+import Ternary.Core.Kernel
 import Ternary.Core.Addition
+import Ternary.Core.Normalize
 import Ternary.Core.Multiplication
 import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
@@ -46,6 +48,11 @@ outDigits (Out ds) = toList ds
 
 data Sm = Loading | Ready MulStateAS deriving Show
 
+type Depth = Int
+
+data Sn = InitNorm Depth [T2] | Normalizing Depth [T1]
+        deriving Show
+
 -- We reference a node from which to consume the output, and we track
 -- how many of the available digits we have already consumed.
 
@@ -62,6 +69,7 @@ instance Show OnSecond where
 data NodeCalc = IdCalc Var Out
               | PlusCalc Consumed Consumed Sa Out OnSecond
               | TimsCalc Consumed Consumed Sm Out
+              | NormCalc Consumed Sn Out
               deriving Show
 
 data Calculation = Calc Ref (Map Ref NodeCalc)
@@ -81,6 +89,7 @@ isInput _ = False
 nodeOutput :: NodeCalc -> Out
 nodeOutput (PlusCalc _ _ _ out _) = out
 nodeOutput (TimsCalc _ _ _ out) = out
+nodeOutput (NormCalc _ _ out) = out
 nodeOutput (IdCalc _ out) = out
 
 -- Remember that addition needs to prepend a certain number of zeros
@@ -102,6 +111,7 @@ initNodeCalc (Id var) _ = IdCalc var initOut
 initNodeCalc (Plus a b) shift = initPlusMinNodeCalc a b shift id
 initNodeCalc (Mins a b) shift = initPlusMinNodeCalc a b shift negateT2
 initNodeCalc (Tims a b) _ = TimsCalc (Consumed a 0) (Consumed b 0) Loading initOut
+initNodeCalc (Norm a n) _ = NormCalc (Consumed a 0) (InitNorm n []) initOut
 
 initCalc :: Expr -> Calculation
 initCalc x = Calc (rootRef x) calcMap
@@ -163,6 +173,7 @@ activesAny p (ActiveIns ins, ActiveOps ops) = any p ins || any p ops
 activatedBy :: (Ref, NodeCalc) -> NodeCalc -> Bool
 child `activatedBy` PlusCalc a b _ _ _ = exhausted child a || exhausted child b
 child `activatedBy` TimsCalc a b _ _   = exhausted child a || exhausted child b
+child `activatedBy` NormCalc a _ _ = exhausted child a
 child `activatedBy` IdCalc _ _ = False
 
 exhausted :: (Ref, NodeCalc) -> Consumed -> Bool
@@ -225,6 +236,24 @@ refineOperation nodes
     result ((u,c),(v,d)) =
       let (w,new) = kernel (u,v) old
       in  w `seq` TimsCalc c d (Ready new) (append out w)
+--
+refineOperation nodes
+  orig@(NormCalc a (InitNorm n us) out) = maybe orig result (consume nodes a)
+  where
+    result :: (T2, Consumed) -> NodeCalc
+    result (u,c) = NormCalc c state out
+      where initial = u:us
+            state = if length initial == n
+                    then Normalizing n (initNormalize $ reverse initial)
+                    else InitNorm n initial
+--
+refineOperation nodes
+  orig@(NormCalc a (Normalizing n old) out) = maybe orig result (consume nodes a)
+  where
+    result :: (T2, Consumed) -> NodeCalc
+    result (u,c) = 
+      let (w,new) = iterateKernel normalize n u old 
+      in w `seq` NormCalc c (Normalizing n new) (append out w)
 --
 refineOperation _ _ = error "Ternary.Sampling.Calculation (refineOperation)"
 

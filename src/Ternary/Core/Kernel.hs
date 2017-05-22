@@ -1,6 +1,7 @@
 module Ternary.Core.Kernel (
   Kernel, FirstTwoSteps (Step0, Step1),
-  serial, chain, zipKernelsWith, transformFirstTwo) where
+  serial, chain, zipKernelsWith, transformFirstTwo,
+  iterateKernel) where
 
 -- A kernel is a machine with an internal state.  This state is such a
 -- fundamental type here, that I decided not to hide it.
@@ -44,3 +45,7 @@ chain gen (p:ps) a (u:us) =
       (c,vs) = b `seq` chain gen ps b us
   in v `seq` (c,v:vs)
 chain _ [] a [] = (a,[])
+
+
+iterateKernel :: Kernel a a s -> Int -> Kernel a a [s]
+iterateKernel k n = chain (const k) [1..n]

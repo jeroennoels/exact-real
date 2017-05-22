@@ -5,14 +5,15 @@ module Ternary.List.FiniteExact (
   unsafeApplyFinite, unsafeLift, truncateLift,
   triadToFiniteExact, finiteExactToTriad, phi,
   finitizeAdd, finitizeMult,
-  multiplyAltFS, multiplyAltIE, multiplyAltAL, multiplyAltAS) where
-
+  multiplyAltFS, multiplyAltIE, multiplyAltAL, multiplyAltAS,
+  normalizeFiniteExact) where
+  
 import Data.List (genericLength, genericTake)
 
 import Ternary.Core.Digit (T2(O0), fromT2)
+import Ternary.Core.Multiplication (fineStructure)
 import Ternary.Util.Triad (Triad, div3, exp3, triadNumerator, triadExponent)
 import Ternary.Util.Misc (Binop)
-import Ternary.Core.Multiplication (fineStructure)
 import Ternary.Compiler.StateSpace (integerEncoding)
 
 import Ternary.List.Exact hiding (
@@ -121,3 +122,8 @@ multiplyAltAL = finitizeMult $ Exact.multiplyAltAL
 
 multiplyAltAS :: Binop FiniteExact
 multiplyAltAS = finitizeMult $ Exact.multiplyAltAS
+
+
+normalizeFiniteExact :: Int -> FiniteExact -> FiniteExact
+normalizeFiniteExact depth x = takeFinite (finiteLength x) infinite
+   where infinite = normalizeExact depth (infiniteExact x)

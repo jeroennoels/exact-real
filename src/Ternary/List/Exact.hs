@@ -5,6 +5,8 @@ module Ternary.List.Exact where
 import Data.List (genericReplicate, genericLength)
 
 import Ternary.Util.Misc (assertNonNegative, digits, Binop)
+import Ternary.Core.Kernel
+import Ternary.Core.Normalize
 import Ternary.Core.Digit
 import Ternary.Core.Addition (plus, Sa(Sa0))
 import Ternary.Core.Multiplication
@@ -74,3 +76,10 @@ multiplyAltAL = multiplyExact arrayLookup
 
 multiplyAltAS :: Binop Exact
 multiplyAltAS = multiplyExact arrayState
+
+
+normalizeExact :: Int -> Exact -> Exact
+normalizeExact depth (Exact as p) = Exact ds (p - fromIntegral depth)
+  where (bs,cs) = splitAt depth as  
+        initial = initNormalize bs
+        ds = recurse (iterateKernel normalize depth) cs initial

@@ -3,6 +3,7 @@
 module Ternary.TestTernary where
 
 import Ternary.Core.Digit
+import Ternary.Core.Normalize
 import Ternary.Core.Multiplication (MultiplicationState(kernel))
 
 import Ternary.List.Exact (Exact(Exact))
@@ -176,6 +177,8 @@ miscUnitTest =
      property qcScalar),
     ("Multiplication self terms",
      property qcSelf),
+    ("Normalize",
+     property qcNormalize),
     ("Kernel chain",
      property qcChain)])
 
@@ -190,3 +193,12 @@ blackBoxTest = quickSuite $
 
 fastTest = quickCheck $
   property $ qcIntegerMultiplication multiplyAltAL
+
+
+qcNormalize :: Int -> FiniteExact -> Bool
+qcNormalize n x = normalizeFiniteExact depth z == z
+  where
+    depth = abs n `mod` 10
+    as = [P1] ++ replicate (2*depth) M2
+    y = unsafeFinite (Exact as $ fromIntegral depth)
+    z = x * y

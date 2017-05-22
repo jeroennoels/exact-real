@@ -64,6 +64,7 @@ references :: Ref -> Node -> Bool
 references ref (Plus a b) = ref == a || ref == b
 references ref (Mins a b) = ref == a || ref == b
 references ref (Tims a b) = ref == a || ref == b
+references ref (Norm a _) = ref == a
 references ref (Id _) = False
 
 -- Combine an expression and its pruned equivalent
@@ -135,4 +136,5 @@ significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
     eval m (Plus a b) = onPlusMin m a b
     eval m (Mins a b) = onPlusMin m a b
     eval m (Tims a b) = 1 + m!a + m!b
+    eval m (Norm a _) = m!a - 1
     eval _ (Id var) = binding var

@@ -12,6 +12,7 @@ import Data.List (sort)
 import Data.Map.Strict (Map, (!), insert, empty, fromList, foldlWithKey', findMax)
 import qualified Data.Map.Strict as Map
 
+import Ternary.Util.Misc
 
 -- To keep it simple, the variables of an expression of arity n are
 -- labeled by numbers from 0 to n-1.
@@ -30,10 +31,11 @@ bindAll values (Var i) = values !! i
 -- References point to shared sub-expressions.
 newtype Ref = Ref Int deriving (Eq, Ord, Show)
 
-data Node = Id Var
-          | Mins Ref Ref
-          | Plus Ref Ref
-          | Tims Ref Ref
+data Node = Id Var        -- input
+          | Mins Ref Ref  -- subtract
+          | Plus Ref Ref  -- add
+          | Tims Ref Ref  -- multiply
+          | Norm Ref Int  -- normalize
           deriving Show
 
 -- The offset of an expression is essentially a positive base 3
@@ -54,7 +56,7 @@ newtype Pre = Pre Int deriving Show
 
 data Shift = NoShift
            | ShiftPlusMin Off Pre Pre
-           | ShiftTims Off
+           | Shift Off           
            deriving Show
 
 data Expr = Expr {
@@ -67,12 +69,13 @@ data Expr = Expr {
 -- Thus the graph is acyclic and the nodes are topologically sorted.
 
 monotonic2 :: Ref -> Ref -> Ref -> Bool
-monotonic2 a b p = a < p && b < p
+monotonic2 a b c = a < c && b < c
 
 monotonic :: (Ref, Node) -> Bool
 monotonic (c, Plus a b) = monotonic2 a b c
 monotonic (c, Mins a b) = monotonic2 a b c
 monotonic (c, Tims a b) = monotonic2 a b c
+monotonic (c, Norm a _) = a < c
 monotonic (_, Id _) = True
 
 -- We will do a lot of folding over the (Map Ref Node) that defines an
@@ -130,6 +133,7 @@ naiveEval (Expr _ root nodes _) binding = eval (nodes!root)
     eval (Plus a b) = lift (+) a b
     eval (Mins a b) = lift (-) a b
     eval (Tims a b) = lift (*) a b
+    eval (Norm a _) = eval (nodes!a)
     eval (Id var) = binding var
 
 -- Using the mapScanL combinator is easy and efficient.  It works
@@ -140,6 +144,7 @@ smartEval (Expr _ root nodes _) binding = mapScanL eval nodes ! root
     eval m (Plus a b) = m!a + m!b
     eval m (Mins a b) = m!a - m!b
     eval m (Tims a b) = m!a * m!b
+    eval m (Norm a _) = m!a
     eval _ (Id var) = binding var
 
 slowEvalExample = naiveEval (extreme Plus 30) (bind 1)    -- takes forever
@@ -150,7 +155,7 @@ qcSmartEval b x = naiveEval x b == smartEval x b
 
 offset :: Integral i => Shift -> i
 offset (ShiftPlusMin (Off p) _ _) = fromIntegral p
-offset (ShiftTims (Off p)) = fromIntegral p
+offset (Shift (Off p)) = fromIntegral p
 offset NoShift = 0
 
 -- See Ternary.List.Exact (addExact)
@@ -162,9 +167,13 @@ shiftPlusMin sx sy = ShiftPlusMin (Off (s+1)) (Pre (s-p)) (Pre (s-q))
 
 -- See Ternary.List.Exact (multiplyExact)
 shiftTims :: Shift -> Shift -> Shift
-shiftTims sx sy = ShiftTims (Off (p+q+1))
+shiftTims sx sy = Shift (Off (p+q+1))
   where p = offset sx
         q = offset sy
+
+shiftNorm :: Int -> Shift -> Shift
+shiftNorm depth shift = Shift (Off new)
+  where new = assertNonNegative "expression offset" (offset shift - depth)
 
 -- Remember this only works if the nodes are ordered, bottom up.
 toShifts :: Map Ref Node -> Map Ref Shift
@@ -173,4 +182,5 @@ toShifts = mapScanL shift
     shift m (Plus a b) = shiftPlusMin (m!a) (m!b)
     shift m (Mins a b) = shiftPlusMin (m!a) (m!b)
     shift m (Tims a b) = shiftTims (m!a) (m!b)
+    shift m (Norm a depth) = shiftNorm depth (m!a)
     shift _ _ = NoShift
