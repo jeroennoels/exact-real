@@ -18,11 +18,13 @@ import Ternary.Sampling.Evaluation
 
 import System.IO.Unsafe
 
-
 example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
                       (Ref 1, Tims (Ref 0) (Ref 0)),
-                      (Ref 2, Plus (Ref 0) (Ref 1))]
+                      (Ref 2, Tims (Ref 1) (Ref 1)),                      
+                      (Ref 3, Norm (Ref 2) 3),
+                      (Ref 4, Plus (Ref 0) (Ref 2)),
+                      (Ref 5, Mins (Ref 4) (Ref 3))]
 
 id0 = (Ref 0, Id (Var 0))
 id1 = (Ref 1, Id (Var 1))
@@ -94,6 +96,7 @@ expressionTest = quickBatch $
    [("Evaluation", property qcEvaluate),
     ("Active nodes", property qcActiveNodesBottomUp),
     ("smart vs. naive eval", property $ qcSmartEval (bind 1)),
+    ("Finite evaluation 0", property qcEvalExample),
     ("Finite evaluation 1", property qcEval),
     ("Finite evaluation 2", property qcEval2)])
 
@@ -104,6 +107,10 @@ expr2 = Expr2 . expression . pruneList
 
 instance Arbitrary Expr2 where
   arbitrary = expr2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
+
+
+qcEvalExample :: [T2] -> Bool
+qcEvalExample ds = qcEval example ds
 
 qcEval2 :: Expr2 -> [T2] -> Bool
 qcEval2 (Expr2 expr) ds = qcEval expr ds

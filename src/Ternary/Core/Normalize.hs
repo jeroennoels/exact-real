@@ -17,8 +17,11 @@ normalize O0 M = (M2,M)
 normalize _ _ = error "cannot normalize"
 
 initNormalize :: [T2] -> [T1]
-initNormalize = go . reverse
-  where
-    go [] = []
-    go (a:as) = let (c,bs) = iterateKernel normalize (length as) a (go as)
-                in bs ++ [coerceT1 c]
+initNormalize = initNormalizeRev . reverse
+
+initNormalizeRev :: [T2] -> [T1]
+initNormalizeRev [] = []
+initNormalizeRev (a:as) =
+  let kern = iterateKernel normalize (length as)
+      (c,bs) = kern a (initNormalizeRev as)
+  in bs ++ [coerceT1 c]

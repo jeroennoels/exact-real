@@ -243,8 +243,8 @@ refineOperation nodes
     result :: (T2, Consumed) -> NodeCalc
     result (u,c) = NormCalc c state out
       where initial = u:us
-            state = if length initial == n
-                    then Normalizing n (initNormalize $ reverse initial)
+            state = if length initial == n  -- initialization complete
+                    then Normalizing n (initNormalizeRev $ initial)
                     else InitNorm n initial
 --
 refineOperation nodes
