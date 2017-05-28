@@ -15,6 +15,7 @@ import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
+import Ternary.Mandelbrot (mandelbrot)
 
 import System.IO.Unsafe
 
@@ -96,7 +97,8 @@ expressionTest = quickBatch $
    [("Evaluation", property qcEvaluate),
     ("Active nodes", property qcActiveNodesBottomUp),
     ("smart vs. naive eval", property $ qcSmartEval (bind 1)),
-    ("Finite evaluation 0", property qcEvalExample),
+    ("Finite evaluation: example", property $ qcEval example),
+    ("Finite evaluation: mandelbrot", property $ qcEval (mandelbrot 2)),
     ("Finite evaluation 1", property qcEval),
     ("Finite evaluation 2", property qcEval2)])
 
@@ -108,9 +110,6 @@ expr2 = Expr2 . expression . pruneList
 instance Arbitrary Expr2 where
   arbitrary = expr2 `liftM` (arbitrarySizedNatural >>= arbitraryRefNodes2)
 
-
-qcEvalExample :: [T2] -> Bool
-qcEvalExample ds = qcEval example ds
 
 qcEval2 :: Expr2 -> [T2] -> Bool
 qcEval2 (Expr2 expr) ds = qcEval expr ds

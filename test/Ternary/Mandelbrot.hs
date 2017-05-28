@@ -17,13 +17,21 @@ import Ternary.Sampling.Evaluation
 --  y(1) = im(c)
 
 mandelbrot :: Int -> Expr
-mandelbrot depth = expression (vars ++ concat iterations)
+mandelbrot = mandel (repeat 2) 
+
+
+unsafeMandelbrot :: Int -> Expr
+unsafeMandelbrot = mandel (2 : 2 : repeat 6) 
+
+
+mandel :: [Int] -> Int -> Expr
+mandel normalizations depth = expression (vars ++ concat iterations)
   where
     vars = [(Ref 0, Id (Var 0)), (Ref 1, Id (Var 1))]
-    iterations = map iteration [0..depth-2]
+    iterations = zipWith iteration normalizations [0..depth-1]
 
 absoluteRef :: Int -> Int -> Ref
-absoluteRef k i = Ref (7*k + i)
+absoluteRef k i = Ref (9*k + i)
 
 xRef :: Int -> Ref
 xRef k = absoluteRef (k-1) 0
@@ -31,14 +39,15 @@ xRef k = absoluteRef (k-1) 0
 yRef :: Int -> Ref
 yRef k = absoluteRef (k-1) 1
 
-iteration :: Int -> [(Ref, Node)]
-iteration k =
-  [(rel 2, Tims (rel 0) (rel 0)),  --  x^2
-   (rel 3, Tims (rel 1) (rel 1)),  --  y^2
-   (rel 4, Mins (rel 2) (rel 3)),  --  x^2 - y^2
-   (rel 5, Tims (rel 0) (rel 1)),  --  x*y 
-   (rel 6, Plus (rel 5) (rel 5)),  --  2*x*y
-   (rel 7, Plus (rel 4) (Ref 0)),  --  new x
-   (rel 8, Plus (rel 6) (Ref 1))]  --  new y
-  where
-    rel = absoluteRef k
+iteration :: Int -> Int -> [(Ref, Node)]
+iteration norm k =
+  let rel = absoluteRef k
+  in [(rel 2, Tims (rel 0) (rel 0)),  --  x^2
+      (rel 3, Tims (rel 1) (rel 1)),  --  y^2
+      (rel 4, Mins (rel 2) (rel 3)),  --  x^2 - y^2
+      (rel 5, Tims (rel 0) (rel 1)),  --  x*y 
+      (rel 6, Plus (rel 5) (rel 5)),  --  2*x*y
+      (rel 7, Plus (rel 4) (Ref 0)),  --  new x
+      (rel 8, Plus (rel 6) (Ref 1)),  --  new y
+      (rel 9,  Norm (rel 7) norm),
+      (rel 10, Norm (rel 8) norm)]
