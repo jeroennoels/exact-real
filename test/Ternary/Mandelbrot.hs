@@ -7,22 +7,20 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 
---  x(k+1) = x(k)^2 - y(k)^2 + re(c)
---  y(k+1) = 2 x(k) y(k) + im(c)
+--  x(1) = re(c) = a
+--  y(1) = im(c) = b
 
---  x(0) = 0
---  y(0) = 0
+step :: Num r => (r,r) -> (r,r) -> (r,r)
+step (a,b) (x,y) = (x*x - y*y + a, 2*x*y + b)
 
---  x(1) = re(c)
---  y(1) = im(c)
+numericMandel :: Num r => (r,r) -> [(r,r)]
+numericMandel c = iterate (step c) c
 
 mandelbrot :: Int -> Expr
 mandelbrot = mandel (repeat 2) 
 
-
 unsafeMandelbrot :: Int -> Expr
-unsafeMandelbrot = mandel (2 : 2 : repeat 6) 
-
+unsafeMandelbrot = mandel (2:2:repeat 6) 
 
 mandel :: [Int] -> Int -> Expr
 mandel normalizations depth = expression (vars ++ concat iterations)

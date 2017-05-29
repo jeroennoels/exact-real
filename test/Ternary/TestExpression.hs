@@ -15,7 +15,8 @@ import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
-import Ternary.Mandelbrot (mandelbrot)
+import Ternary.QuickCheckUtil (assert)
+import Ternary.Mandelbrot (mandelbrot, numericMandel, unsafeMandelbrot)
 
 import System.IO.Unsafe
 
@@ -92,7 +93,7 @@ qcActiveNodesBottomUp :: Expr -> Bool
 qcActiveNodesBottomUp = strictlyIncreasingRefs . snd . actives . initCalc
    where actives calc@(Calc root _) = activeNodes calc root
 
-expressionTest = quickBatch $
+expressionTest = quickBatch
   ("Basic properties of arithmetical expressions",
    [("Evaluation", property qcEvaluate),
     ("Active nodes", property qcActiveNodesBottomUp),
@@ -101,6 +102,8 @@ expressionTest = quickBatch $
     ("Finite evaluation: mandelbrot", property $ qcEval (mandelbrot 2)),
     ("Finite evaluation 1", property qcEval),
     ("Finite evaluation 2", property qcEval2)])
+  >> assert "Mandelbrot safe  " (testMandel mandelbrot)
+  >> assert "Mandelbrot unsafe" (testMandel unsafeMandelbrot)
 
 data Expr2 = Expr2 Expr deriving Show
 
@@ -123,6 +126,7 @@ qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
     p = nodeOffset expr root 
     result = Exact (evalFinite expr root va) p
 
+    
 -- Not maximally random but good enough for now.
 buildVarAssign :: Expr -> [T2] -> (VarAssign [T2], Binding Triad)
 buildVarAssign expr as = (map assign [0..n], binding)
@@ -144,3 +148,19 @@ significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
     eval m (Tims a b) = 1 + m!a + m!b
     eval m (Norm a _) = m!a - 1
     eval _ (Id var) = binding var
+
+
+testMandel :: (Int -> Expr) -> Bool
+testMandel constructor = snd direct == finiteExactToTriad (unsafeFinite result)
+  where
+    zeros = replicate 300 O0  -- enough for depth 6
+    as = [O0,P1,O0,M1] ++ zeros
+    bs = [P2,M1,P1,P1] ++ zeros
+    va = [(Var 0, as), (Var 1, bs)]
+    (a,b) = (phi as, phi bs)
+    depth = 6
+    direct = numericMandel (a,b) !! depth
+    expr = constructor depth
+    root = rootRef expr
+    p = nodeOffset expr root
+    result = Exact (evalFinite expr root va) p
