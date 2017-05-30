@@ -20,7 +20,7 @@ mandelbrot :: Int -> Expr
 mandelbrot = mandel (repeat 2) 
 
 unsafeMandelbrot :: Int -> Expr
-unsafeMandelbrot = mandel (2:2:repeat 6) 
+unsafeMandelbrot = mandel (2:repeat 4) 
 
 mandel :: [Int] -> Int -> Expr
 mandel normalizations depth = expression (vars ++ concat iterations)
