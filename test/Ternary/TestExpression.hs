@@ -23,7 +23,7 @@ import System.IO.Unsafe
 example :: Expr
 example = expression [(Ref 0, Id (Var 0)),
                       (Ref 1, Tims (Ref 0) (Ref 0)),
-                      (Ref 2, Tims (Ref 1) (Ref 1)),                      
+                      (Ref 2, Tims (Ref 1) (Ref 1)),
                       (Ref 3, Norm (Ref 2) 3),
                       (Ref 4, Plus (Ref 0) (Ref 2)),
                       (Ref 5, Mins (Ref 4) (Ref 3))]
@@ -123,10 +123,10 @@ qcEval expr ds = direct == finiteExactToTriad (unsafeFinite result)
     direct = smartEval expr binding
     (va, binding) = buildVarAssign expr ds
     root = rootRef expr
-    p = nodeOffset expr root 
+    p = nodeOffset expr root
     result = Exact (evalFinite expr root va) p
 
-    
+
 -- Not maximally random but good enough for now.
 buildVarAssign :: Expr -> [T2] -> (VarAssign [T2], Binding Triad)
 buildVarAssign expr as = (map assign [0..n], binding)
@@ -146,7 +146,7 @@ significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
     eval m (Plus a b) = onPlusMin m a b
     eval m (Mins a b) = onPlusMin m a b
     eval m (Tims a b) = 1 + m!a + m!b
-    eval m (Norm a _) = m!a - 1
+    eval m (Norm a depth) = m!a - fromInteger (fromIntegral depth)
     eval _ (Id var) = binding var
 
 
@@ -154,9 +154,9 @@ testMandel :: (Int -> Expr) -> Bool
 testMandel constructor = snd direct == finiteExactToTriad (unsafeFinite result)
   where
     zeros = replicate 300 O0  -- enough for depth 6
-    as = [O0,P1,O0,M1] ++ zeros
-    bs = [P2,M1,P1,P1] ++ zeros
-    va = [(Var 0, as), (Var 1, bs)]
+    as = [O0,P1,O0,M1]
+    bs = [P2,M1,P1,P1]
+    va = [(Var 0, as ++ zeros), (Var 1, bs ++ zeros)]
     (a,b) = (phi as, phi bs)
     depth = 6
     direct = numericMandel (a,b) !! depth
