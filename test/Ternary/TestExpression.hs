@@ -134,11 +134,12 @@ buildVarAssign expr as = (map assign [0..n], binding)
     n = arity expr - 1
     k = significantDigits expr (const (1 + length as))
     zeros = replicate (k+1) O0
-    digits i = let (bs,cs) = splitAt i as in cs ++ bs  -- shuffle
-    assign i = (Var i, digits i ++ zeros)
-    binding (Var i) = phi (digits i)
+    shuffle i = let (bs,cs) = splitAt i as in cs ++ bs
+    digits = map shuffle [0..n]
+    assign i = (Var i, digits !! i ++ zeros)
+    binding (Var i) = phi (digits !! i)
 
-
+-- experimental
 significantDigits :: (Ord a, Num a) => Expr -> Binding a -> a
 significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
   where
@@ -146,7 +147,7 @@ significantDigits expr binding = mapScanL eval (nodes expr) ! rootRef expr
     eval m (Plus a b) = onPlusMin m a b
     eval m (Mins a b) = onPlusMin m a b
     eval m (Tims a b) = 1 + m!a + m!b
-    eval m (Norm a depth) = m!a - fromInteger (fromIntegral depth)
+    eval m (Norm a depth) = m!a  -- deviates from Shift calculation
     eval _ (Id var) = binding var
 
 

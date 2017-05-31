@@ -7,8 +7,6 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 
---  x(1) = re(c) = a
---  y(1) = im(c) = b
 
 step :: Num r => (r,r) -> (r,r) -> (r,r)
 step (a,b) (x,y) = (x*x - y*y + a, 2*x*y + b)
@@ -17,7 +15,7 @@ numericMandel :: Num r => (r,r) -> [(r,r)]
 numericMandel c = iterate (step c) c
 
 mandelbrot :: Int -> Expr
-mandelbrot = mandel (repeat 2) 
+mandelbrot = mandel (1:repeat 2) 
 
 unsafeMandelbrot :: Int -> Expr
 unsafeMandelbrot = mandel (2:repeat 4) 
@@ -49,3 +47,10 @@ iteration norm k =
       (rel 8, Plus (rel 6) (Ref 1)),  --  new y
       (rel 9,  Norm (rel 7) norm),
       (rel 10, Norm (rel 8) norm)]
+
+-- if
+--     |x|,|y| < 3^p
+--     |a|,|b| < 1
+-- then
+--     |new x| < 1 + 3^2p     <= 3^(2p+1)  
+--     |new y| < 1 + 2 * 3^2p <= 3^(2p+1) 
