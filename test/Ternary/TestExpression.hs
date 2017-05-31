@@ -160,7 +160,7 @@ testMandel constructor = snd direct == finiteExactToTriad (unsafeFinite result)
     va = [(Var 0, as ++ zeros), (Var 1, bs ++ zeros)]
     (a,b) = (phi as, phi bs)
     depth = 6
-    direct = numericMandel (a,b) !! depth
+    direct = numericMandel (2*a,2*b) !! depth
     expr = constructor depth
     root = rootRef expr
     p = nodeOffset expr root

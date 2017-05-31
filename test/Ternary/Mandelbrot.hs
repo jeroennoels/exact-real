@@ -21,10 +21,12 @@ unsafeMandelbrot :: Int -> Expr
 unsafeMandelbrot = mandel (2:repeat 4) 
 
 mandel :: [Int] -> Int -> Expr
-mandel normalizations depth = expression (vars ++ concat iterations)
+mandel normalizations depth = expression (vars ++ scale ++ concat iterations)
   where
     vars = [(Ref 0, Id (Var 0)), (Ref 1, Id (Var 1))]
-    iterations = zipWith iteration normalizations [0..depth-1]
+    double i = (absoluteRef 1 i, Plus (Ref i) (Ref i))
+    scale = [double 0, double 1]
+    iterations = zipWith iteration normalizations [1..depth]
 
 absoluteRef :: Int -> Int -> Ref
 absoluteRef k i = Ref (9*k + i)
@@ -43,14 +45,14 @@ iteration norm k =
       (rel 4, Mins (rel 2) (rel 3)),  --  x^2 - y^2
       (rel 5, Tims (rel 0) (rel 1)),  --  x*y 
       (rel 6, Plus (rel 5) (rel 5)),  --  2*x*y
-      (rel 7, Plus (rel 4) (Ref 0)),  --  new x
-      (rel 8, Plus (rel 6) (Ref 1)),  --  new y
+      (rel 7, Plus (rel 4) (Ref 9)),  --  new x
+      (rel 8, Plus (rel 6) (Ref 10)), --  new y
       (rel 9,  Norm (rel 7) norm),
       (rel 10, Norm (rel 8) norm)]
 
 -- if
 --     |x|,|y| < 3^p
---     |a|,|b| < 1
+--     |a|,|b| < 2
 -- then
---     |new x| < 1 + 3^2p     <= 3^(2p+1)  
---     |new y| < 1 + 2 * 3^2p <= 3^(2p+1) 
+--     |new x| < 2 + 3^2p     <= 3^(2p+1)  
+--     |new y| < 2 + 2 * 3^2p <= 3^(2p+1) 
