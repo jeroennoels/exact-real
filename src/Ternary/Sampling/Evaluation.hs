@@ -16,12 +16,13 @@ unsafeBind assoc var = fromJust (lookup var assoc)
 evalFinite :: Expr -> Ref -> VarAssign [T2] -> [T2]
 evalFinite expr top = recurse $ Refined (initCalc expr)
   where
-    recurse refinement lists | inputExhausted lists = output top refinement
-    recurse refinement lists =
-      case refine refinement top of
-       Left done -> recurse done lists
-       Right ask -> recurse (continue (provideInput heads ask)) tails
-         where (heads, tails) = unconsInputs lists (variables ask)
+    recurse refinement lists
+      | inputExhausted lists = output top refinement
+      | otherwise =
+          case refine refinement top of
+           Left done -> recurse done lists
+           Right ask -> recurse (continue (provideInput heads ask)) tails
+             where (heads, tails) = unconsInputs lists (variables ask)
 
 -- We stop as soon as one of the variables is fully consumed, even
 -- when that variable is not immediately needed.  So we could do
