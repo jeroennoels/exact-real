@@ -156,7 +156,7 @@ testMandel constructor = snd direct == finiteExactToTriad (unsafeFinite result)
   where
     zeros = replicate 300 O0  -- enough for depth 6
     as = [O0,P1,O0,M1]
-    bs = [P2,M1,P1,P1]
+    bs = [O0,M1,P1,P1]
     va = [(Var 0, as ++ zeros), (Var 1, bs ++ zeros)]
     (a,b) = (phi as, phi bs)
     depth = 6

@@ -18,7 +18,7 @@ mandelbrot :: Int -> Expr
 mandelbrot = mandel (1:repeat 2) 
 
 unsafeMandelbrot :: Int -> Expr
-unsafeMandelbrot = mandel (2:repeat 4) 
+unsafeMandelbrot = mandel (repeat 4) 
 
 mandel :: [Int] -> Int -> Expr
 mandel normalizations depth = expression (vars ++ scale ++ concat iterations)
@@ -30,12 +30,6 @@ mandel normalizations depth = expression (vars ++ scale ++ concat iterations)
 
 absoluteRef :: Int -> Int -> Ref
 absoluteRef k i = Ref (9*k + i)
-
-xRef :: Int -> Ref
-xRef k = absoluteRef (k-1) 0
-
-yRef :: Int -> Ref
-yRef k = absoluteRef (k-1) 1
 
 iteration :: Int -> Int -> [(Ref, Node)]
 iteration norm k =
@@ -56,3 +50,26 @@ iteration norm k =
 -- then
 --     |new x| < 2 + 3^2p     <= 3^(2p+1)  
 --     |new y| < 2 + 2 * 3^2p <= 3^(2p+1) 
+
+xRef :: Int -> Ref
+xRef k = absoluteRef k 7
+
+yRef :: Int -> Ref
+yRef k = absoluteRef k 8
+
+type XY = ([T2],[T2],Int)
+
+sampleMandelbrot :: Int -> [XY]
+sampleMandelbrot limit = go init ([],[],1) []
+  where
+    expr = unsafeMandelbrot limit
+    init = Refined (initCalc expr)
+    
+    go :: Refined -> XY -> [XY] -> [XY]
+    go refinement xy@(_,_,depth) acc
+      | depth > limit = acc
+      | otherwise =
+          case refine refinement (xRef depth) of
+           Left done -> 
+           Right ask -> []
+
