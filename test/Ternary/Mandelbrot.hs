@@ -66,13 +66,15 @@ sampleMandelbrot limit = undefined
 newtype SampleIn = SI [T2] deriving Show
 type ComplexIn = (SampleIn, SampleIn)
 type Acc = [ComplexIn]
-data Refinable = Ready1 | Ready2 | Stalled deriving Show
+data Refinable = Ready1 | Ready2 deriving Show
+data Stalled = Stall deriving Show
+
 type Depth = Int
 
 cons :: T2 -> SampleIn -> SampleIn
 cons a (SI as) = SI (a:as)
 
-data Analysis = IncDepth | Bailout | InputNeeded | Inconclusive
+data Analysis = IncDepth | Bailout | Inconclusive
               deriving Show
 
 limit = 2
@@ -81,26 +83,25 @@ analyze :: Depth -> Refinable -> Analysis
 analyze depth _ | depth > limit = Bailout  
 analyze _ Ready1 = Inconclusive
 analyze _ Ready2 = IncDepth
-analyze _ Stalled = InputNeeded
 
-proceed :: Binding T2 -> Refinable -> Refinable
-proceed _ Stalled = Ready2
+proceed :: Binding T2 -> Stalled -> Either Refinable Stalled
+proceed _ Stall = Left Ready2
 
-refine :: Refinable -> Refinable
-refine Ready1 = Stalled
-refine Ready2 = Ready1
+refine :: Refinable -> Either Refinable Stalled
+refine Ready1 = Right Stall
+refine Ready2 = Left Ready1
 
-recurse :: ComplexIn -> Depth -> Refinable -> Acc -> Acc
-recurse c depth refinable acc =
+recurse :: ComplexIn -> Depth -> Either Refinable Stalled -> Acc -> Acc
+recurse c depth (Left refinable) acc =
   case analyze depth refinable of
    Bailout -> c:acc
-   IncDepth -> recurse c (depth+1) (refine refinable) acc
+   IncDepth -> recurse c (depth+1) (refine refinable) acc 
    Inconclusive -> recurse c depth (refine refinable) acc
-   InputNeeded ->
-     let go :: Acc -> (ComplexIn, Binding T2) -> Acc
-         go accum (extended, binding) =
-           recurse extended depth (proceed binding refinable) accum
-     in foldl go acc (branching c)
+recurse c depth (Right refinable) acc =
+  let go :: Acc -> (ComplexIn, Binding T2) -> Acc
+      go accum (extended, binding) =
+        recurse extended depth (proceed binding refinable) accum
+  in foldl go acc (branching c)
 
 
 prepare :: ComplexIn -> T2 -> (ComplexIn, Binding T2)
