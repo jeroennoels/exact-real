@@ -4,7 +4,7 @@ import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
-import Ternary.Sampling.Calculation
+import Ternary.Sampling.Calculation hiding (Depth, refine)
 import Ternary.Sampling.Evaluation
 
 
@@ -61,3 +61,52 @@ sampleMandelbrot limit = undefined
   where
     expr = unsafeMandelbrot limit
     init = Refined (initCalc expr)
+
+
+newtype SampleIn = SI [T2] deriving Show
+type ComplexIn = (SampleIn, SampleIn)
+type Acc = [ComplexIn]
+data Refinable = Ready1 | Ready2 | Stalled deriving Show
+type Depth = Int
+
+cons :: T2 -> SampleIn -> SampleIn
+cons a (SI as) = SI (a:as)
+
+data Analysis = IncDepth | Bailout | InputNeeded | Inconclusive
+              deriving Show
+
+limit = 2
+
+analyze :: Depth -> Refinable -> Analysis
+analyze depth _ | depth > limit = Bailout  
+analyze _ Ready1 = Inconclusive
+analyze _ Ready2 = IncDepth
+analyze _ Stalled = InputNeeded
+
+proceed :: Binding T2 -> Refinable -> Refinable
+proceed _ Stalled = Ready2
+
+refine :: Refinable -> Refinable
+refine Ready1 = Stalled
+refine Ready2 = Ready1
+
+recurse :: ComplexIn -> Depth -> Refinable -> Acc -> Acc
+recurse c depth refinable acc =
+  case analyze depth refinable of
+   Bailout -> c:acc
+   IncDepth -> recurse c (depth+1) (refine refinable) acc
+   Inconclusive -> recurse c depth (refine refinable) acc
+   InputNeeded ->
+     let go :: Acc -> (ComplexIn, Binding T2) -> Acc
+         go accum (extended, binding) =
+           recurse extended depth (proceed binding refinable) accum
+     in foldl go acc (branching c)
+
+
+prepare :: ComplexIn -> T2 -> (ComplexIn, Binding T2)
+prepare (a,b) d = ((cons d a, b), const d)
+
+branching :: ComplexIn -> [(ComplexIn, Binding T2)]
+branching c = map (prepare c) [M1, O0, P1]
+
+-- recurse (SI [], SI []) 1 Ready1 []
