@@ -26,7 +26,9 @@ evalFinite expr top = recurse $ Refined (initCalc expr)
 
 -- We stop as soon as one of the variables is fully consumed, even
 -- when that variable is not immediately needed.  So we could do
--- better here.  But I prefer to keep it simple.
+-- better here.  But I prefer to keep it simple.  The main purpose
+-- here is testing the Calculation module.
+
 inputExhausted :: VarAssign [a] -> Bool
 inputExhausted lists = any (null . snd) lists
 
