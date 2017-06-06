@@ -1,3 +1,6 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+
 module Ternary.Mandelbrot where
 
 import Ternary.Core.Digit
@@ -79,19 +82,34 @@ data Analysis = IncDepth | Bailout | Inconclusive
 
 limit = 2
 
-analyze :: Depth -> Refinable -> Analysis
-analyze depth _ | depth > limit = Bailout  
-analyze _ Ready1 = Inconclusive
-analyze _ Ready2 = IncDepth
+analyze' :: Depth -> Refinable -> Analysis
+analyze' depth _ | depth > limit = Bailout  
+analyze' _ Ready1 = Inconclusive
+analyze' _ Ready2 = IncDepth
 
-proceed :: Binding T2 -> Stalled -> Either Refinable Stalled
-proceed _ Stall = Left Ready2
+proceed' :: Binding T2 -> Stalled -> Either Refinable Stalled
+proceed' _ Stall = Left Ready2
 
-refine :: Refinable -> Either Refinable Stalled
-refine Ready1 = Right Stall
-refine Ready2 = Left Ready1
+refine' :: Refinable -> Either Refinable Stalled
+refine' Ready1 = Right Stall
+refine' Ready2 = Left Ready1
 
-recurse :: ComplexIn -> Depth -> Either Refinable Stalled -> Acc -> Acc
+class RefinC r s | r -> s, s -> r  where
+  refine :: r -> Either r s
+  proceed :: Binding T2 -> s -> Either r s
+
+class AnalyzeC r where
+  analyze :: Depth -> r -> Analysis
+
+instance RefinC Refinable Stalled where
+  refine = refine'
+  proceed = proceed'
+
+instance AnalyzeC Refinable where
+  analyze = analyze'
+
+recurse :: (RefinC r s, AnalyzeC r)
+           => ComplexIn -> Depth -> Either r s -> Acc -> Acc
 recurse c depth (Left refinable) acc =
   case analyze depth refinable of
    Bailout -> c:acc
@@ -110,4 +128,4 @@ prepare (a,b) d = ((cons d a, b), const d)
 branching :: ComplexIn -> [(ComplexIn, Binding T2)]
 branching c = map (prepare c) [M1, O0, P1]
 
--- recurse (SI [], SI []) 1 Ready1 []
+-- recurse (SI [], SI []) 1 (Left Ready1) []
