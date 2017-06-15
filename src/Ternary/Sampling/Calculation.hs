@@ -282,10 +282,10 @@ variables :: NeedsInput -> [Var]
 variables (NeedsInput _ (ActiveIns ins, _)) = map (extract . snd) ins
   where extract (IdCalc var _) = var
 
-refine :: Refined -> Ref -> Either Refined NeedsInput
+refine :: Refined -> Ref -> Either NeedsInput Refined
 refine (Refined calc) top
-  | null ins =   Left $ Refined (refineCalculation ops calc)
-  | otherwise = Right $ NeedsInput calc actives
+  | null ins = Right $ Refined (refineCalculation ops calc)
+  | otherwise = Left $ NeedsInput calc actives
   where actives@(ActiveIns ins, ops) = activeNodes calc top
 
 continue :: Continue -> Refined

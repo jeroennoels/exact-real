@@ -71,8 +71,8 @@ instance Refinable Refined NeedsInput where
    refine old depth =
      let calcX = Calculation.refine old (xRef depth)
      in case calcX of
-         Left new -> Calculation.refine new (yRef depth)
-         Right ni -> Right ni
+         Right new -> Calculation.refine new (yRef depth)
+         Left ni -> Left ni
          
    proceed = undefined
    variables = Calculation.variables

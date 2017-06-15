@@ -20,8 +20,8 @@ evalFinite expr top = recurse $ Refined (initCalc expr)
       | inputExhausted lists = output top refinement
       | otherwise =
           case refine refinement top of
-           Left done -> recurse done lists
-           Right ask -> recurse (continue (provideInput heads ask)) tails
+           Right done -> recurse done lists
+           Left ask -> recurse (continue (provideInput heads ask)) tails
              where (heads, tails) = unconsInputs lists (variables ask)
 
 -- We stop as soon as one of the variables is fully consumed, even

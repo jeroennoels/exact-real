@@ -12,8 +12,8 @@ data Analysis = IncDepth | Bailout | Inconclusive
               deriving Show
 
 class Refinable r s | r -> s, s -> r  where
-  refine :: r -> Depth -> Either r s
-  proceed :: Binding T2 -> s -> Either r s
+  refine :: r -> Depth -> Either s r
+  proceed :: Binding T2 -> s -> Either s r
   variables :: s -> [Var]
 
 class Analyze r where
@@ -31,9 +31,9 @@ data Stalled = Stall Int deriving Show
 -- BeginLevel --> Stall --> NextLevel --> BeginLevel ...
 
 instance Refinable Ready Stalled where
-  refine BeginLevel depth = Right (Stall depth)
-  refine NextLevel _ = Left BeginLevel
-  proceed _ (Stall n) = Left NextLevel
+  refine BeginLevel depth = Left (Stall depth)
+  refine NextLevel _ = Right BeginLevel
+  proceed _ (Stall n) = Right NextLevel
   variables (Stall n) = case n `rem` 4 of
     0 -> [Var 0, Var 1]
     1 -> [Var 1]
@@ -52,15 +52,15 @@ limit = 7
 logres = 1
 
 recurse :: (Refinable r s, Analyze r) =>
-           Walk2 -> Depth -> Either r s -> Acc -> Acc
--- left
-recurse c depth (Left refinable) acc =
+           Walk2 -> Depth -> Either s r -> Acc -> Acc
+--
+recurse c depth (Right refinable) acc =
   case analyze depth refinable of
    Bailout -> (c,depth):acc
    IncDepth -> recurse c (depth+1) (refine refinable depth) acc 
    Inconclusive -> recurse c depth (refine refinable depth) acc
--- right
-recurse c depth (Right stalled) acc =
+-- 
+recurse c depth (Left stalled) acc =
   let go :: Acc -> (Walk2, Binding T2) -> Acc
       go accum (extended, binding) =
         recurse extended depth (proceed binding stalled) accum
@@ -90,5 +90,5 @@ bind (Just u) _ (Var 0) = u
 bind _ (Just v) (Var 1) = v
 bind _ _ _ = error "Ternary.Recursive (bind)"
 
-test = recurse (Walk [] 0, Walk [] 0) 1 (Left BeginLevel) []
+test = recurse (Walk [] 0, Walk [] 0) 1 (Right BeginLevel) []
 
