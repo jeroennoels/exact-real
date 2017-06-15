@@ -69,10 +69,9 @@ sampleMandelbrot limit = undefined
 
 instance Refinable Refined NeedsInput where
    refine old depth =
-     let calcX = Calculation.refine old (xRef depth)
-     in case calcX of
-         Right new -> Calculation.refine new (yRef depth)
-         Left ni -> Left ni
+     Calculation.refine (xRef depth) old >>=
+     Calculation.refine (yRef depth)
+     
          
    proceed = undefined
    variables = Calculation.variables
