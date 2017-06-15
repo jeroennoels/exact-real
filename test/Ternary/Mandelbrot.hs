@@ -1,3 +1,6 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+
 module Ternary.Mandelbrot where
 
 import Ternary.Core.Digit
@@ -5,6 +8,9 @@ import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation (Refined(Refined), initCalc)
+import Ternary.Sampling.Calculation hiding (Depth, refine, variables)
+import qualified Ternary.Sampling.Calculation as Calculation (refine, variables)
+
 import Ternary.Recursive
 
 step :: Num r => (r,r) -> (r,r) -> (r,r)
@@ -60,3 +66,13 @@ sampleMandelbrot limit = undefined
   where
     expr = unsafeMandelbrot limit
     init = Refined (initCalc expr)
+
+instance Refinable Refined NeedsInput where
+   refine old depth =
+     let calcX = Calculation.refine old (xRef depth)
+     in case calcX of
+         Left new -> Calculation.refine new (yRef depth)
+         Right ni -> Right ni
+         
+   proceed = undefined
+   variables = Calculation.variables
