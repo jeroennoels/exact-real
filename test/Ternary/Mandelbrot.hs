@@ -3,15 +3,18 @@
 
 module Ternary.Mandelbrot where
 
+import Control.Applicative (liftA2)
+
 import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
+import Ternary.Util.Triad
 import Ternary.Sampling.Expression
-import Ternary.Sampling.Calculation (Refined(Refined), initCalc)
-import Ternary.Sampling.Calculation hiding (Depth, refine, variables)
-import qualified Ternary.Sampling.Calculation as Calculation (refine, variables)
-
+import qualified Ternary.Sampling.Calculation as C
 import Ternary.Recursive
+
+import System.IO.Unsafe
+
 
 step :: Num r => (r,r) -> (r,r) -> (r,r)
 step (a,b) (x,y) = (x*x - y*y + a, 2*x*y + b)
@@ -62,16 +65,80 @@ xRef k = absoluteRef k 7
 yRef :: Int -> Ref
 yRef k = absoluteRef k 8
 
-sampleMandelbrot limit = undefined
+sampleMandelbrot = recurse (Walk [] 0, Walk [] 0) 2 (Right init) []
   where
     expr = unsafeMandelbrot limit
-    init = Refined (initCalc expr)
+    init = C.Refined (C.initCalc expr)
 
-instance Refinable Refined NeedsInput where
-   refine old depth =
-     Calculation.refine (xRef depth) old >>=
-     Calculation.refine (yRef depth)
-     
-         
-   proceed = undefined
-   variables = Calculation.variables
+alternate :: C.Refined -> Depth -> (Ref, Ref)
+alternate r depth =
+  let x = C.output (xRef depth) r
+      y = C.output (yRef depth) r
+  in if length x <= length y -- todo swapIf
+     then (xRef depth, yRef depth)
+     else (yRef depth, xRef depth)
+
+
+instance Refinable C.Refined C.NeedsInput where
+   refine r depth = C.refine x r >>= C.refine y
+     where (x,y) = alternate r depth
+   proceed binding = Right . C.continue . C.provideInput binding
+   variables = C.variables
+
+instance Analyze C.Refined where
+  analyze depth _ | depth > limit = Bailout
+  analyze depth r =
+    let x = C.output (xRef depth) r
+        y = C.output (yRef depth) r
+        escapes = absExceedsTwo x `orMaybe` absExceedsTwo y
+        escapes' = unsafePerformIO (putStrLn $ show depth ++ show (take 10 x, take 10 y)) `seq` escapes
+    in case escapes of
+        Just True -> Bailout
+        Just False -> IncDepth
+        Nothing -> Inconclusive
+
+-- 3VL disjunction
+orMaybe :: Maybe Bool -> Maybe Bool -> Maybe Bool
+orMaybe (Just True) _ = Just True
+orMaybe _ (Just True) = Just True
+orMaybe (Just False) (Just False) = Just False
+orMaybe _ _ = Nothing
+
+-- assuming offset = 5
+absExceedsTwo :: [T2] -> Maybe Bool
+absExceedsTwo ds
+  | a > 2 + epsilon = Just True 
+  | a <= 2 - epsilon = Just False
+  | otherwise = Nothing 
+  where x = unsafeFinite $ Exact ds 5
+        a = abs (finiteExactToTriad x)
+        epsilon = makeTriad 243 (fromIntegral $ length ds) 
+
+-- assuming offset = 1
+absExceedsTwo' :: [T2] -> Maybe Bool 
+absExceedsTwo' (P1:_) = Just False 
+absExceedsTwo' (O0:_) = Just False 
+absExceedsTwo' (M1:_) = Just False 
+absExceedsTwo' (P2:ds) = case firstNonZero ds of
+  Just d -> Just (isPositive d)
+  Nothing -> Nothing
+absExceedsTwo' (M2:ds) = case firstNonZero ds of
+  Just d -> Just (isNegative d)
+  Nothing -> Nothing
+absExceedsTwo' [] = Nothing
+
+
+isPositive :: T2 -> Bool
+isPositive P2 = True
+isPositive P1 = True
+isPositive _ = False
+
+isNegative :: T2 -> Bool
+isNegative M2 = True
+isNegative M1 = True
+isNegative _ = False
+
+firstNonZero :: [T2] -> Maybe T2
+firstNonZero (O0:ds) = firstNonZero ds
+firstNonZero (d:_) = Just d
+firstNonZero _ = Nothing

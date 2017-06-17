@@ -7,6 +7,7 @@ import Data.Either
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map.Strict (Map, insert, foldrWithKey', intersectionWith, (!))
+import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
 
 import Ternary.Core.Digit
@@ -16,7 +17,7 @@ import Ternary.Core.Normalize
 import Ternary.Core.Multiplication
 import Ternary.Compiler.ArrayState
 import Ternary.Sampling.Expression
-import Ternary.Util.Misc (both, strictlyIncreasing)
+import Ternary.Util.Misc (strictlyIncreasing)
 
 -- Because consumers may lag, each node needs to remember the complete
 -- output it has produced thus far.
@@ -201,7 +202,7 @@ consume nodes (Consumed a p)
 type DigitPairConsumed = ((T2, Consumed), (T2, Consumed))
 
 consume2 :: Map Ref NodeCalc -> Consumed -> Consumed -> Maybe DigitPairConsumed
-consume2 nodes a b = both (consume nodes a) (consume nodes b)
+consume2 nodes a b = liftA2 (,) (consume nodes a) (consume nodes b)
 
 
 refineOperation :: Map Ref NodeCalc -> NodeCalc -> NodeCalc

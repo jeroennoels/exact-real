@@ -3,12 +3,7 @@ module Ternary.Util.Misc where
 import Control.Monad (liftM2)
 import Data.Array.IArray (IArray, array)
 
-
 type Binop a = a -> a -> a
-
-both :: Maybe a -> Maybe b -> Maybe (a,b)
-both (Just a) (Just b) = Just (a,b)
-both _ _ = Nothing
 
 {-# INLINE rangeCheck #-}
 rangeCheck :: Ord a => a -> a -> a -> a

@@ -38,9 +38,9 @@ instance Refinable Ready Stalled where
     0 -> [Var 0, Var 1]
     1 -> [Var 1]
     otherwise -> [Var 0]
-  
+
 instance Analyze Ready where
-  analyze depth _ | depth > limit = Bailout  
+  analyze depth _ | depth > limit = Bailout
   analyze _ BeginLevel = Inconclusive
   analyze _ NextLevel = IncDepth
 
@@ -48,8 +48,8 @@ instance Analyze Ready where
 type Depth = Int
 
 limit :: Depth
-limit = 7
-logres = 1
+limit = 10
+logres = 2
 
 recurse :: (Refinable r s, Analyze r) =>
            Walk2 -> Depth -> Either s r -> Acc -> Acc
@@ -57,16 +57,16 @@ recurse :: (Refinable r s, Analyze r) =>
 recurse c depth (Right refinable) acc =
   case analyze depth refinable of
    Bailout -> (c,depth):acc
-   IncDepth -> recurse c (depth+1) (refine refinable depth) acc 
+   IncDepth -> recurse c (depth+1) (refine refinable depth) acc
    Inconclusive -> recurse c depth (refine refinable depth) acc
--- 
+--
 recurse c depth (Left stalled) acc =
   let go :: Acc -> (Walk2, Binding T2) -> Acc
       go accum (extended, binding) =
         recurse extended depth (proceed binding stalled) accum
   in foldl go acc (branching c (variables stalled))
 
-done (Walk xs _) = not $ null (drop logres xs) 
+done (Walk xs _) = not $ null (drop logres xs)
 
 cons :: Maybe T2 -> Walk -> Walk
 cons _ w@(Walk as n) | done w = Walk as (n+1)
