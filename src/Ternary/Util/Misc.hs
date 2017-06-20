@@ -5,6 +5,18 @@ import Data.Array.IArray (IArray, array)
 
 type Binop a = a -> a -> a
 
+
+swapIf :: (a,a) -> Bool -> (a,a)
+swapIf keep@(x,y) swap = if swap then (y,x) else keep
+
+-- 3VL disjunction
+orMaybe :: Maybe Bool -> Maybe Bool -> Maybe Bool
+orMaybe (Just True) _ = Just True
+orMaybe _ (Just True) = Just True
+orMaybe (Just False) (Just False) = Just False
+orMaybe _ _ = Nothing
+
+
 {-# INLINE rangeCheck #-}
 rangeCheck :: Ord a => a -> a -> a -> a
 rangeCheck lo hi x

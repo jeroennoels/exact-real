@@ -302,8 +302,11 @@ nodeInput binding (IdCalc var out) = IdCalc var (out `append` binding var)
 refineInput :: (Var -> T2) -> (Ref, NodeCalc) -> Calculation -> Calculation
 refineInput binding (ref, node) = transform $ insert ref (nodeInput binding node)
 
-output :: Ref -> Refined -> [T2]
-output ref (Refined (Calc _ nodes)) = outDigits $ nodeOutput (nodes!ref)
+outputList :: Ref -> Refined -> [T2]
+outputList ref = outDigits . output ref
+
+output :: Ref -> Refined -> Out
+output ref (Refined (Calc _ nodes)) = nodeOutput (nodes!ref)
 
 nodeOffset :: Integral i => Expr -> Ref -> i
 nodeOffset x ref = offset (shifts x ! ref)

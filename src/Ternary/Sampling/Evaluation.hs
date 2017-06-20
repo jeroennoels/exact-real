@@ -17,7 +17,7 @@ evalFinite :: Expr -> Ref -> VarAssign [T2] -> [T2]
 evalFinite expr top = recurse $ Refined (initCalc expr)
   where
     recurse refinement lists
-      | inputExhausted lists = output top refinement
+      | inputExhausted lists = outputList top refinement
       | otherwise =
           case refine top refinement of
            Right done -> recurse done lists

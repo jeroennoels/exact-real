@@ -9,13 +9,13 @@ import Ternary.Core.Digit
 import Ternary.List.Exact
 import Ternary.List.FiniteExact
 import Ternary.Util.Triad
+import Ternary.Util.Misc (orMaybe, swapIf)
 import Ternary.Sampling.Expression
 import qualified Ternary.Sampling.Calculation as C
 import Ternary.Recursive
 
 import Data.Map.Strict (Map, fromList, toAscList)
 import Data.List.Split (chunksOf)
-
 
 
 step :: Num r => (r,r) -> (r,r) -> (r,r)
@@ -67,18 +67,16 @@ xRef k = absoluteRef k 7
 yRef :: Int -> Ref
 yRef k = absoluteRef k 8
 
-sampleMandelbrot = recurse (Walk [] 0, Walk [] 0) 2 (Right init) []
+sampleMandelbrot = recurse (Walk [] 0, Walk [] 0) 1 (Right init) []
   where
     expr = unsafeMandelbrot limit
     init = C.Refined (C.initCalc expr)
 
 alternate :: C.Refined -> Depth -> (Ref, Ref)
 alternate r depth =
-  let x = C.output (xRef depth) r
-      y = C.output (yRef depth) r
-  in if length x <= length y -- todo swapIf
-     then (xRef depth, yRef depth)
-     else (yRef depth, xRef depth)
+  let x = C.produced $ C.output (xRef depth) r
+      y = C.produced $ C.output (yRef depth) r
+  in (xRef depth, yRef depth) `swapIf` (x > y)
 
 
 instance Refinable C.Refined C.NeedsInput where
@@ -90,71 +88,33 @@ instance Refinable C.Refined C.NeedsInput where
 instance Analyze C.Refined where
   analyze depth _ | depth > limit = Bailout
   analyze depth r =
-    let x = C.output (xRef depth) r
-        y = C.output (yRef depth) r
+    let x = C.outputList (xRef depth) r
+        y = C.outputList (yRef depth) r
         escapes = absExceedsTwo x `orMaybe` absExceedsTwo y
     in case escapes of
         Just True -> Bailout
         Just False -> IncDepth
         Nothing -> Inconclusive
 
--- 3VL disjunction
-orMaybe :: Maybe Bool -> Maybe Bool -> Maybe Bool
-orMaybe (Just True) _ = Just True
-orMaybe _ (Just True) = Just True
-orMaybe (Just False) (Just False) = Just False
-orMaybe _ _ = Nothing
 
 -- assuming offset = 5
 absExceedsTwo :: [T2] -> Maybe Bool
 absExceedsTwo ds
   | a > 2 + epsilon = Just True 
-  | a <= 2 - epsilon = Just False
+  | a < 2 - epsilon = Just False
   | otherwise = Nothing 
   where x = unsafeFinite $ Exact ds 5
         a = abs (finiteExactToTriad x)
-        epsilon = makeTriad 243 (fromIntegral $ length ds) 
+        epsilon = makeTriad 243 (fromIntegral $ length ds)
 
--- assuming offset = 1
-absExceedsTwo' :: [T2] -> Maybe Bool 
-absExceedsTwo' (P1:_) = Just False 
-absExceedsTwo' (O0:_) = Just False 
-absExceedsTwo' (M1:_) = Just False 
-absExceedsTwo' (P2:ds) = case firstNonZero ds of
-  Just d -> Just (isPositive d)
-  Nothing -> Nothing
-absExceedsTwo' (M2:ds) = case firstNonZero ds of
-  Just d -> Just (isNegative d)
-  Nothing -> Nothing
-absExceedsTwo' [] = Nothing
-
-
-isPositive :: T2 -> Bool
-isPositive P2 = True
-isPositive P1 = True
-isPositive _ = False
-
-isNegative :: T2 -> Bool
-isNegative M2 = True
-isNegative M1 = True
-isNegative _ = False
-
-firstNonZero :: [T2] -> Maybe T2
-firstNonZero (O0:ds) = firstNonZero ds
-firstNonZero (d:_) = Just d
-firstNonZero _ = Nothing
 
 keyValue :: (Walk2, Depth) -> (([T2],[T2]), Int)
 keyValue ((Walk as _, Walk bs _), n) = ((reverse bs, reverse as), n)
 
-accToMap :: Acc -> Map ([T2],[T2]) Int
-accToMap = fromList . map keyValue
-
 sortWalk :: Acc -> [Int]
-sortWalk = map snd . toAscList . accToMap
+sortWalk = map snd . toAscList . fromList . map keyValue
 
 toImage :: [Int] -> [String]
 toImage = chunksOf (3^(logres+1)) . map toChar
   where toChar a | a > limit = ' '
                  | otherwise = '#'
-

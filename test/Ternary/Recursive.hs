@@ -49,7 +49,7 @@ type Depth = Int
 
 limit :: Depth
 limit = 10
-logres = 3
+logres = 2
 
 recurse :: (Refinable r s, Analyze r) =>
            Walk2 -> Depth -> Either s r -> Acc -> Acc
