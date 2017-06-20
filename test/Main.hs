@@ -19,7 +19,7 @@ run ["w"] = whiteBoxTest
 run ["e"] = exhaustiveTest
 run ["m"] = mandelbrotTest
 run ["exp"] = expressionTest
-run _ = evalPerformance
+run _ = sequence_ $ map putStrLn $ toImage $ sortWalk $ sampleMandelbrot
 
 whiteBoxTest = coreTest >> compilerTest
 

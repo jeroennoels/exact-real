@@ -13,7 +13,9 @@ import Ternary.Sampling.Expression
 import qualified Ternary.Sampling.Calculation as C
 import Ternary.Recursive
 
-import System.IO.Unsafe
+import Data.Map.Strict (Map, fromList, toAscList)
+import Data.List.Split (chunksOf)
+
 
 
 step :: Num r => (r,r) -> (r,r) -> (r,r)
@@ -91,7 +93,6 @@ instance Analyze C.Refined where
     let x = C.output (xRef depth) r
         y = C.output (yRef depth) r
         escapes = absExceedsTwo x `orMaybe` absExceedsTwo y
-        escapes' = unsafePerformIO (putStrLn $ show depth ++ show (take 10 x, take 10 y)) `seq` escapes
     in case escapes of
         Just True -> Bailout
         Just False -> IncDepth
@@ -142,3 +143,18 @@ firstNonZero :: [T2] -> Maybe T2
 firstNonZero (O0:ds) = firstNonZero ds
 firstNonZero (d:_) = Just d
 firstNonZero _ = Nothing
+
+keyValue :: (Walk2, Depth) -> (([T2],[T2]), Int)
+keyValue ((Walk as _, Walk bs _), n) = ((reverse bs, reverse as), n)
+
+accToMap :: Acc -> Map ([T2],[T2]) Int
+accToMap = fromList . map keyValue
+
+sortWalk :: Acc -> [Int]
+sortWalk = map snd . toAscList . accToMap
+
+toImage :: [Int] -> [String]
+toImage = chunksOf (3^(logres+1)) . map toChar
+  where toChar a | a > limit = ' '
+                 | otherwise = '#'
+
