@@ -7,6 +7,7 @@ import Control.Applicative (liftA2)
 import Ternary.Core.Digit (T2(..))
 import Ternary.Sampling.Expression (Var(Var), Binding)
 
+type Depth = Int
 
 data Analysis = IncDepth | Bailout | Inconclusive
               deriving Show
@@ -20,7 +21,8 @@ class Analyze r where
   analyze :: Depth -> r -> Analysis
 
 
-data Walk = Walk [T2] Int deriving Show
+data Walk = After [T2] Int | Branching [T2] Int
+          deriving Show
 
 type Walk2 = (Walk, Walk)
 type Acc = [(Walk2, Depth)]
@@ -40,16 +42,10 @@ instance Refinable Ready Stalled where
     otherwise -> [Var 0]
 
 instance Analyze Ready where
-  analyze depth _ | depth > limit = Bailout
+  analyze depth _ | depth > limit = Bailout where limit = 3
   analyze _ BeginLevel = Inconclusive
   analyze _ NextLevel = IncDepth
 
-
-type Depth = Int
-
-limit :: Depth
-limit = 10
-logres = 2
 
 recurse :: (Refinable r s, Analyze r) =>
            Walk2 -> Depth -> Either s r -> Acc -> Acc
@@ -66,11 +62,14 @@ recurse c depth (Left stalled) acc =
         recurse extended depth (proceed binding stalled) accum
   in foldl go acc (branching c (variables stalled))
 
-done (Walk xs _) = not $ null (drop logres xs)
+      
+path :: Walk -> [T2]
+path (After xs _) = reverse xs
 
 cons :: Maybe T2 -> Walk -> Walk
-cons _ w@(Walk as n) | done w = Walk as (n+1)
-cons (Just a) (Walk as 0) = Walk (a:as) 0
+cons _ w@(After as n) = After as (n+1)
+cons (Just a) (Branching as n) | n > 0 = Branching (a:as) (n-1)
+cons _ (Branching as 0) = After as 0
 cons Nothing w = w
 
 branching :: Walk2 -> [Var] -> [(Walk2, Binding T2)]
@@ -80,7 +79,8 @@ branching c@(a,b) vars = liftA2 (prepare c)
 
 branch :: [Var] -> Var -> Walk -> [Maybe T2]
 branch vars var _ | var `notElem` vars = [Nothing]
-branch _ _ a | done a = [Just O0]
+branch _ _ (Branching _ 0) = [Just O0]
+branch _ _ (After _ _) = [Just O0]
 branch _ _ _ = map Just [M1,O0,P1]
 
 prepare :: Walk2 -> Maybe T2 -> Maybe T2 -> (Walk2, Binding T2)
@@ -90,5 +90,4 @@ bind (Just u) _ (Var 0) = u
 bind _ (Just v) (Var 1) = v
 bind _ _ _ = error "Ternary.Recursive (bind)"
 
-test = recurse (Walk [] 0, Walk [] 0) 1 (Right BeginLevel) []
-
+test = recurse (Branching [] 2, Branching [] 2) 1 (Right BeginLevel) []

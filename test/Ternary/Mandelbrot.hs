@@ -67,16 +67,24 @@ xRef k = absoluteRef k 7
 yRef :: Int -> Ref
 yRef k = absoluteRef k 8
 
-sampleMandelbrot = recurse (Walk [] 0, Walk [] 0) 1 (Right init) []
+logres = 4
+limit = 5
+
+sampleMandelbrot = recurse (walk, walk) 1 (Right init) []
   where
     expr = unsafeMandelbrot limit
+    walk = Branching [] logres
     init = C.Refined (C.initCalc expr)
+
+-- We need to alternate the order in which the two output nodes are
+-- refined.  Otherwise we keep refining one node, and remain forever
+-- stuck on the other.
 
 alternate :: C.Refined -> Depth -> (Ref, Ref)
 alternate r depth =
-  let x = C.produced $ C.output (xRef depth) r
-      y = C.produced $ C.output (yRef depth) r
-  in (xRef depth, yRef depth) `swapIf` (x > y)
+  let lenx = C.produced $ C.output (xRef depth) r
+      leny = C.produced $ C.output (yRef depth) r
+  in (xRef depth, yRef depth) `swapIf` (lenx > leny)
 
 
 instance Refinable C.Refined C.NeedsInput where
@@ -109,12 +117,12 @@ absExceedsTwo ds
 
 
 keyValue :: (Walk2, Depth) -> (([T2],[T2]), Int)
-keyValue ((Walk as _, Walk bs _), n) = ((reverse bs, reverse as), n)
+keyValue ((a,b),n) = ((path b, path a), n)
 
 sortWalk :: Acc -> [Int]
 sortWalk = map snd . toAscList . fromList . map keyValue
 
 toImage :: [Int] -> [String]
-toImage = chunksOf (3^(logres+1)) . map toChar
+toImage = chunksOf (3^logres) . map toChar
   where toChar a | a > limit = ' '
                  | otherwise = '#'
