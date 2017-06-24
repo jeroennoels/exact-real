@@ -1,6 +1,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
+-- This is intended as a test case for the Sampling module. 
+
 module Ternary.Mandelbrot where
 
 import Control.Applicative (liftA2)
@@ -27,6 +29,8 @@ numericMandel c = iterate (step c) c
 mandelbrot :: Int -> Expr
 mandelbrot = mandel (1:repeat 2)
 
+-- Carefully tuned normalization ensures a fixed offset = 5 at the
+-- refinement points.
 unsafeMandelbrot :: Int -> Expr
 unsafeMandelbrot = mandel (repeat 4)
 
@@ -67,8 +71,8 @@ xRef k = absoluteRef k 7
 yRef :: Int -> Ref
 yRef k = absoluteRef k 8
 
-logres = 4
-limit = 5
+logres = 3
+limit = 20
 
 sampleMandelbrot = recurse (walk, walk) 1 (Right init) []
   where
@@ -82,9 +86,8 @@ sampleMandelbrot = recurse (walk, walk) 1 (Right init) []
 
 alternate :: C.Refined -> Depth -> (Ref, Ref)
 alternate r depth =
-  let lenx = C.produced $ C.output (xRef depth) r
-      leny = C.produced $ C.output (yRef depth) r
-  in (xRef depth, yRef depth) `swapIf` (lenx > leny)
+  let len reff = C.produced $ C.output (reff depth) r
+  in (xRef depth, yRef depth) `swapIf` (len xRef > len yRef)
 
 
 instance Refinable C.Refined C.NeedsInput where
@@ -93,12 +96,12 @@ instance Refinable C.Refined C.NeedsInput where
    proceed binding = Right . C.continue . C.provideInput binding
    variables = C.variables
 
+
 instance Analyze C.Refined where
   analyze depth _ | depth > limit = Bailout
   analyze depth r =
-    let x = C.outputList (xRef depth) r
-        y = C.outputList (yRef depth) r
-        escapes = absExceedsTwo x `orMaybe` absExceedsTwo y
+    let out reff = C.outputList (reff depth) r
+        escapes = absExceedsTwo (out xRef) `orMaybe` absExceedsTwo (out yRef)
     in case escapes of
         Just True -> Bailout
         Just False -> IncDepth
