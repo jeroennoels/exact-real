@@ -9,7 +9,7 @@ import Ternary.Exhaust (exhaustiveTest, exhaustMultiplication)
 import Ternary.TestCompiler (compilerTest)
 import Ternary.Examples ()
 import Ternary.TestExpression (expressionTest)
-import Ternary.Mandelbrot
+import Mandelbrot.Mandelbrot
 
 main = getArgs >>= run >> putStrLn ""
 

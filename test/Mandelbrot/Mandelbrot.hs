@@ -3,7 +3,7 @@
 
 -- This is intended as a test case for the Sampling module. 
 
-module Ternary.Mandelbrot where
+module Mandelbrot.Mandelbrot where
 
 import Control.Applicative (liftA2)
 
@@ -14,7 +14,7 @@ import Ternary.Util.Triad
 import Ternary.Util.Misc (orMaybe, swapIf)
 import Ternary.Sampling.Expression
 import qualified Ternary.Sampling.Calculation as C
-import Ternary.Recursive
+import Mandelbrot.Recursive
 
 import Data.Map.Strict (Map, fromList, toAscList)
 import Data.List.Split (chunksOf)

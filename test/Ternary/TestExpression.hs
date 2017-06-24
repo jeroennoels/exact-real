@@ -16,7 +16,7 @@ import Ternary.Sampling.Expression
 import Ternary.Sampling.Calculation
 import Ternary.Sampling.Evaluation
 import Ternary.QuickCheckUtil (assert)
-import Ternary.Mandelbrot (mandelbrot, numericMandel, unsafeMandelbrot)
+import Mandelbrot.Mandelbrot (mandelbrot, numericMandel, unsafeMandelbrot)
 
 import System.IO.Unsafe
 

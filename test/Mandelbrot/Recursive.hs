@@ -3,7 +3,7 @@
 
 -- We model the recursive branching strategy as a separate concern.
 
-module Ternary.Recursive where
+module Mandelbrot.Recursive where
 
 import Control.Applicative (liftA2)
 import Ternary.Core.Digit (T2(..))
