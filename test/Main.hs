@@ -1,6 +1,7 @@
 module Main (main) where
 
 import System.Environment (getArgs)
+import System.TimeIt
 
 import Ternary.TestTernary (blackBoxTest, coreTest, fastTest)
 import Ternary.Performance (performanceTest, evalPerformance)
@@ -19,7 +20,7 @@ run ["w"] = whiteBoxTest
 run ["e"] = exhaustiveTest
 run ["m"] = mandelbrotTest
 run ["exp"] = expressionTest
-run _ = sequence_ $ map putStrLn $ toImage $ sortWalk $ sampleMandelbrot
+run _ = timeIt $ sequence_ $ map putStrLn $ toImage $ sortWalk $ sampleMandelbrot
 
 whiteBoxTest = coreTest >> compilerTest
 
