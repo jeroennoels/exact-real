@@ -93,6 +93,7 @@ step ab ps = chained ab ps irrelevant
   where irrelevant = undefined :: T2
 
 data MulState s = MulState [TriangleParam] [s]
+                deriving Show
 
 -- Notice the "final cons" that adds an initial state to prepare for
 -- the next round of chained transitions.
